@@ -99,7 +99,7 @@ collabcanvas/
   - Run: `npx tailwindcss init -p`
   - Add Tailwind directives to `index.css`
 
-- [ ] **1.4: Set Up Firebase Project**
+- [x] **1.4: Set Up Firebase Project**
 
   - Create Firebase project in console
   - Enable Authentication (Email/Password AND Google)
@@ -108,28 +108,28 @@ collabcanvas/
   - Files to create: `.env`, `.env.example`
   - Add Firebase config keys to `.env`
 
-- [ ] **1.5: Create Firebase Service File**
+- [x] **1.5: Create Firebase Service File**
 
-  - Files to create: `src/services/firebase.js`
+  - Files to create: `src/services/firebase.ts`
   - Initialize Firebase app
   - Export `auth`, `db` (Firestore), `rtdb` (Realtime Database)
 
-- [ ] **1.6: Configure Git & .gitignore**
+- [x] **1.6: Configure Git & .gitignore**
 
   - Files to create/update: `.gitignore`
   - Ensure `.env` is ignored
   - Add `node_modules/`, `dist/`, `.firebase/` to `.gitignore`
 
-- [ ] **1.7: Create README with Setup Instructions**
+- [x] **1.7: Create README with Setup Instructions**
   - Files to create: `README.md`
   - Include setup steps, env variables needed, run commands
 
 **PR Checklist:**
 
-- [ ] Dev server runs successfully
-- [ ] Firebase initialized without errors
-- [ ] Tailwind classes work in test component
-- [ ] `.env` is in `.gitignore`
+- [x] Dev server runs successfully
+- [x] Firebase initialized without errors
+- [x] Tailwind classes work in test component
+- [x] `.env` is in `.gitignore`
 
 ---
 
@@ -140,52 +140,52 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **2.1: Create Auth Context**
+- [x] **2.1: Create Auth Context**
 
-  - Files to create: `src/contexts/AuthContext.jsx`
+  - Files to create: `src/contexts/AuthContext.tsx`
   - Provide: `currentUser`, `loading`, `login()`, `signup()`, `logout()`
 
-- [ ] **2.2: Create Auth Service**
+- [x] **2.2: Create Auth Service**
 
-  - Files to create: `src/services/auth.js`
+  - Files to create: `src/services/auth.ts`
   - Functions: `signUp(email, password, displayName)`, `signIn(email, password)`, `signInWithGoogle()`, `signOut()`, `updateUserProfile(displayName)`
   - Display name logic: Extract from Google profile or use email prefix
 
-- [ ] **2.3: Create Auth Hook**
+- [x] **2.3: Create Auth Hook**
 
-  - Files to create: `src/hooks/useAuth.js`
+  - Files to create: `src/hooks/useAuth.ts`
   - Return auth context values
 
-- [ ] **2.4: Build Signup Component**
+- [x] **2.4: Build Signup Component**
 
-  - Files to create: `src/components/Auth/Signup.jsx`
+  - Files to create: `src/components/Auth/Signup.tsx`
   - Form fields: email, password, display name
   - Handle signup errors
   - Redirect to canvas on success
 
-- [ ] **2.5: Build Login Component**
+- [x] **2.5: Build Login Component**
 
-  - Files to create: `src/components/Auth/Login.jsx`
+  - Files to create: `src/components/Auth/Login.tsx`
   - Form fields: email, password
   - Add "Sign in with Google" button
   - Handle login errors
   - Link to signup page
 
-- [ ] **2.6: Create Auth Provider Wrapper**
+- [x] **2.6: Create Auth Provider Wrapper**
 
-  - Files to create: `src/components/Auth/AuthProvider.jsx`
+  - Files to create: `src/components/Auth/AuthProvider.tsx`
   - Wrap entire app with AuthContext
   - Show loading state during auth check
 
-- [ ] **2.7: Update App.jsx with Protected Routes**
+- [x] **2.7: Update App.tsx with Protected Routes**
 
-  - Files to update: `src/App.jsx`
+  - Files to update: `src/App.tsx`
   - Show Login/Signup if not authenticated
   - Show Canvas if authenticated
   - Basic routing logic
 
-- [ ] **2.8: Create Navbar Component**
-  - Files to create: `src/components/Layout/Navbar.jsx`
+- [x] **2.8: Create Navbar Component**
+  - Files to create: `src/components/Layout/Navbar.tsx`
   - Display current user name
   - Logout button
 
