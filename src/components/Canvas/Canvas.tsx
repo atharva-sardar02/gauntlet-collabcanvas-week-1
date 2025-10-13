@@ -4,6 +4,8 @@ import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
 import Shape from './Shape';
+import Cursor from '../Collaboration/Cursor';
+import { useCursors } from '../../hooks/useCursors';
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -35,6 +37,9 @@ const Canvas = () => {
   // Shape drawing state
   const [isDrawing, setIsDrawing] = useState(false);
   const [newShape, setNewShape] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  // Cursor tracking
+  const { cursors, updateCursorPosition } = useCursors();
 
   // Set the stage ref in context
   useEffect(() => {
@@ -166,9 +171,20 @@ const Canvas = () => {
   };
 
   /**
-   * Handle mouse move - update shape preview while drawing
+   * Handle mouse move - update shape preview and cursor position
    */
-  const handleMouseMove = () => {
+  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Update cursor position for other users
+    const stage = stageRef.current;
+    if (stage) {
+      const pointerPos = stage.getPointerPosition();
+      if (pointerPos) {
+        // Update cursor position (screen coordinates for other users to see)
+        updateCursorPosition(pointerPos.x, pointerPos.y);
+      }
+    }
+
+    // Handle shape drawing preview
     if (!isDrawing || !newShape) return;
 
     const pos = getRelativePointerPosition();
@@ -504,6 +520,9 @@ const Canvas = () => {
         <p className="text-sm text-gray-700">
           <span className="font-semibold">Zoom:</span> {Math.round(scale * 100)}%
         </p>
+        <p className="text-sm text-gray-700">
+          <span className="font-semibold">Users:</span> {Object.keys(cursors).length + 1}
+        </p>
         <p className="text-sm text-gray-500 text-xs mt-1">
           Click & Drag to create shapes
         </p>
@@ -511,6 +530,17 @@ const Canvas = () => {
           Delete/Backspace to remove
         </p>
       </div>
+
+      {/* Render other users' cursors */}
+      {Object.entries(cursors).map(([userId, cursorData]) => (
+        <Cursor
+          key={userId}
+          x={cursorData.cursorX}
+          y={cursorData.cursorY}
+          color={cursorData.cursorColor}
+          name={cursorData.displayName}
+        />
+      ))}
     </div>
   );
 };

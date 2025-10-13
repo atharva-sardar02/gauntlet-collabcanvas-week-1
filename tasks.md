@@ -479,7 +479,7 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **6.1: Design Realtime Database Schema**
+- [x] **6.1: Design Realtime Database Schema**
 
   - Path: `/sessions/global-canvas-v1/{userId}`
   - Data structure:
@@ -493,16 +493,16 @@ collabcanvas/
     }
     ```
 
-- [ ] **6.2: Create Cursor Service**
+- [x] **6.2: Create Cursor Service**
 
-  - Files to create: `src/services/cursors.js`
+  - Files to create: `src/services/cursors.ts`
   - Function: `updateCursorPosition(canvasId, userId, x, y, name, color)`
   - Function: `subscribeToCursors(canvasId, callback)`
   - Function: `removeCursor(canvasId, userId)` (on disconnect)
 
-- [ ] **6.3: Create Cursors Hook**
+- [x] **6.3: Create Cursors Hook**
 
-  - Files to create: `src/hooks/useCursors.js`
+  - Files to create: `src/hooks/useCursors.ts`
   - Track mouse position on canvas
   - Convert screen coords to canvas coords
   - Throttle updates to 25 FPS (40ms intervals)
@@ -510,37 +510,37 @@ collabcanvas/
   - Optimistic rendering (only exception to server-authoritative rule)
   - Return: `cursors` object (keyed by userId)
 
-- [ ] **6.4: Build Cursor Component**
+- [x] **6.4: Build Cursor Component**
 
-  - Files to create: `src/components/Collaboration/Cursor.jsx`
+  - Files to create: `src/components/Collaboration/Cursor.tsx`
   - SVG cursor icon with user color
   - Name label next to cursor
   - Smooth CSS transitions for movement
 
-- [ ] **6.5: Integrate Cursors into Canvas**
+- [x] **6.5: Integrate Cursors into Canvas**
 
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Add `onMouseMove` handler to Stage
   - Update cursor position in RTDB
   - Render Cursor components for all other users
 
-- [ ] **6.6: Assign User Colors**
+- [x] **6.6: Assign User Colors**
 
-  - Files to update: `src/utils/constants.js`
+  - Files to update: `src/utils/constants.ts`
   - Define: `CURSOR_COLORS = ["#FF5733", "#33C1FF", "#FFC300", "#DAF7A6", "#C70039", "#900C3F", "#581845", "#28B463", "#3498DB"]`
   - Files to create/update: `src/utils/helpers.js`
   - Function: `getRandomCursorColor()` - randomly assigned on join
   - Ensure sufficient contrast against light backgrounds
   - Maintain color consistency per user throughout session
 
-- [ ] **6.7: Handle Cursor Cleanup**
+- [x] **6.7: Handle Cursor Cleanup**
 
-  - Files to update: `src/hooks/useCursors.js`
+  - Files to update: `src/hooks/useCursors.ts`
   - Remove cursor on component unmount
   - Use `onDisconnect()` in RTDB to auto-cleanup
 
-- [ ] **6.8: Optimize Cursor Updates**
-  - Files to update: `src/hooks/useCursors.js`
+- [x] **6.8: Optimize Cursor Updates**
+  - Files to update: `src/hooks/useCursors.ts`
   - Throttle mouse events to 25 FPS (40ms intervals)
   - Only send if position changed significantly (>2px)
   - Smooth interpolation for received cursor positions
