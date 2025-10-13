@@ -364,7 +364,7 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **5.1: Design Firestore Schema**
+- [x] **5.1: Design Firestore Schema**
 
   - Collection: `canvas` (single document: `global-canvas-v1`)
   - Document structure:
@@ -393,31 +393,31 @@ collabcanvas/
     }
     ```
 
-- [ ] **5.2: Create Canvas Service**
+- [x] **5.2: Create Canvas Service**
 
-  - Files to create: `src/services/canvas.js`
+  - Files to create: `src/services/canvas.ts`
   - Function: `subscribeToShapes(canvasId, callback)`
   - Function: `createShape(canvasId, shapeData)`
   - Function: `updateShape(canvasId, shapeId, updates)`
   - Function: `deleteShape(canvasId, shapeId)`
 
-- [ ] **5.3: Create Canvas Hook**
+- [x] **5.3: Create Canvas Hook**
 
-  - Files to create: `src/hooks/useCanvas.js`
+  - Files to create: `src/hooks/useCanvas.ts`
   - Subscribe to Firestore on mount
   - Sync local state with Firestore
   - Return: `shapes`, `addShape()`, `updateShape()`, `deleteShape()`
 
-- [ ] **5.4: Integrate Real-Time Updates in Context**
+- [x] **5.4: Integrate Real-Time Updates in Context**
 
-  - Files to update: `src/contexts/CanvasContext.jsx`
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - Replace local state with `useCanvas` hook
   - Listen to Firestore changes
   - Update local shapes array on remote changes
 
-- [ ] **5.5: Implement Object Locking**
+- [x] **5.5: Implement Object Locking**
 
-  - Files to update: `src/services/canvas.js`
+  - Files to update: `src/services/canvas.ts`
   - Strategy: First user to select/drag acquires lock
   - Function: `lockShape(canvasId, shapeId, userId, userColor)`
   - Function: `unlockShape(canvasId, shapeId)`
@@ -428,25 +428,25 @@ collabcanvas/
     - Small badge with user's name appears near locked shape
     - Tooltip "Locked by [username]" when attempting to move locked shape
   - Other users cannot move locked objects
-  - Files to update: `src/components/Canvas/Shape.jsx`
+  - Files to update: `src/components/Canvas/Shape.tsx`
   - Render lock visual indicators (colored border + user badge)
 
-- [ ] **5.6: Add Loading States**
+- [x] **5.6: Add Loading States**
 
-  - Files to update: `src/contexts/CanvasContext.jsx`
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - Show loading spinner while initial shapes load
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Display "Loading canvas..." message
 
-- [ ] **5.7: Implement Server-Authoritative Updates**
+- [x] **5.7: Implement Server-Authoritative Updates**
 
-  - Files to update: `src/contexts/CanvasContext.jsx`
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - All shape operations wait for server confirmation (no optimistic updates)
   - Accept ~100ms latency for operations in exchange for reliability
   - Show loading/pending state during operations
 
-- [ ] **5.8: Handle Offline/Reconnection**
-  - Files to update: `src/hooks/useCanvas.js`
+- [x] **5.8: Handle Offline/Reconnection**
+  - Files to update: `src/hooks/useCanvas.ts`
   - Enable Firestore offline persistence
   - Show reconnection status
 

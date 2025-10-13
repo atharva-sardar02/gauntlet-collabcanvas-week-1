@@ -25,7 +25,7 @@ const Canvas = () => {
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, setStageRef, selectShape, addShape, updateShape, deleteShape } = context;
+  const { shapes, selectedId, loading, error, setStageRef, selectShape, addShape, updateShape, deleteShape } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
@@ -390,6 +390,30 @@ const Canvas = () => {
     
     return lines;
   };
+
+  // Show loading state while initial shapes load
+  if (loading) {
+    return (
+      <div className="relative w-full flex items-center justify-center" style={{ height: dimensions.height }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg">Loading canvas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="relative w-full flex items-center justify-center" style={{ height: dimensions.height }}>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md">
+          <p className="font-semibold mb-2">Error loading canvas</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full" style={{ height: dimensions.height }}>
