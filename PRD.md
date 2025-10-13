@@ -77,9 +77,9 @@
 **Must Have:**
 
 - Large canvas area (5000x5000px virtual space)
-- Smooth pan functionality (click-and-drag)
+- Smooth pan functionality (click-and-drag with space bar or middle mouse button)
 - Zoom functionality (mousewheel or pinch)
-- Visual grid or reference points (optional but helpful)
+- Light gray background with subtle grid (1000px spacing) for spatial reference
 - Hard boundaries at canvas edges
 - 60 FPS performance during all interactions
 
@@ -87,13 +87,20 @@
 
 - Objects cannot be placed or moved outside boundaries (5000x5000px)
 - Drag operations stop at boundary edges
-- Visual edge indicators (subtle border or shading) - optional but nice to have
+- Canvas starts centered at (2500, 2500) for new users
+- Visual edge indicators: subtle gray border at canvas edges
+
+**Performance Targets:**
+
+- Can handle at least 500 rectangles without performance degradation
+- No hard limit on shape count (performance testing target, not enforced limit)
+- Graceful performance degradation if exceeding 500 shapes
 
 **Success Criteria:**
 
 - Canvas feels responsive and smooth
 - No lag during pan/zoom operations
-- Can handle at least 500 rectangles without performance degradation
+- Maintains 60 FPS with 500+ shapes on canvas
 - Objects are constrained within canvas boundaries
 
 ### 3. Shape Creation & Manipulation
@@ -101,11 +108,18 @@
 **Must Have:**
 
 - **Rectangles only for MVP** (circles and text out of scope)
-- Ability to create new rectangles (click/drag or button)
+- Ability to create new rectangles via click-and-drag interaction (draw rectangle by dragging)
 - Ability to select shapes (click)
 - Ability to move shapes (drag)
-- Visual feedback for selected objects
-- Fixed styling (gray fill color for all shapes)
+- Visual feedback for selected objects (highlighted border)
+- Random fill color assigned on creation (from predefined palette)
+
+**Rectangle Creation Mode:**
+
+- Default mode is "draw" mode - users can immediately click and drag to create rectangles
+- Click-and-drag creates rectangle from starting point to ending point
+- Minimum size: 10x10px to avoid accidental tiny shapes
+- Maximum size: constrained by canvas boundaries
 
 **Selection Behavior:**
 
@@ -113,11 +127,17 @@
 - Only one shape can be selected at a time (multi-select out of scope)
 - Clicking empty canvas deselects current selection
 
+**Shape Styling:**
+
+- Random fill color assigned from predefined palette on creation
+- Color palette ensures good contrast and visibility
+- Colors are purely aesthetic (no functional meaning)
+
 **Success Criteria:**
 
 - Shape creation is intuitive and immediate
 - Drag operations are smooth and responsive
-- Selected state is clearly visible
+- Selected state is clearly visible (highlighted border)
 - Selection behavior is predictable and consistent
 
 ### 4. Real-Time Synchronization
@@ -137,8 +157,15 @@
 
 - First user to start moving an object acquires the lock
 - Other users cannot move the locked object until lock is released
-- Lock automatically releases after drag completes or timeout (3-5 seconds)
-- Clear visual feedback when attempting to move a locked object
+- Lock automatically releases after drag completes or timeout (5 seconds of inactivity)
+- Lock timeout resets if user continues dragging (active drag)
+
+**Visual Lock Indicators:**
+
+- Locked shapes show a colored border matching the user's cursor color who has the lock
+- Small badge with user's name appears near the locked shape
+- Attempting to move a locked shape shows a "Locked by [username]" tooltip
+- Selected state (highlighted border) is distinct from locked state (colored border)
 
 **Success Criteria:**
 
@@ -160,8 +187,15 @@
 **Cursor Colors:**
 
 - Randomly assigned from predefined color palette on user join
+- Color palette: `["#FF5733", "#33C1FF", "#FFC300", "#DAF7A6", "#C70039", "#900C3F", "#581845", "#28B463", "#3498DB"]`
 - Ensure sufficient contrast against white/light backgrounds
 - Maintain color consistency per user throughout session
+
+**Cursor Update Performance:**
+
+- Throttle cursor position updates to 25 FPS (40ms intervals)
+- Smooth interpolation between updates to prevent jitter
+- Updates sent via Firebase Realtime Database for minimal latency
 
 **Success Criteria:**
 
@@ -189,14 +223,23 @@
 
 **Must Have:**
 
-- List of currently connected users
-- Real-time join/leave notifications
-- Visual indicator of online status
+- List of currently connected users displayed in top-right corner
+- Compact user pills/avatars showing name and cursor color
+- Real-time join/leave notifications (subtle toast message)
+- Visual indicator of online status (green dot)
+- Shows count of active users (e.g., "3 users online")
+
+**UI Location:**
+
+- Fixed position in top-right corner of viewport
+- Collapses to just a count on smaller screens
+- Clicking expands to show full list of users
 
 **Success Criteria:**
 
 - Users can see who's in the session at all times
 - Join/leave events update immediately
+- List doesn't obstruct canvas work area
 
 ### 8. State Persistence
 
@@ -246,7 +289,7 @@
       "y": 200,
       "width": 150,
       "height": 100,
-      "fill": "#cccccc",
+      "fill": "#7B68EE",
       "createdBy": "user_id",
       "createdAt": "timestamp",
       "lastModifiedBy": "user_id",
@@ -258,6 +301,10 @@
   "lastUpdated": "timestamp"
 }
 ```
+
+**Color Palette for Shapes:**
+- Random color assigned from predefined set: `["#7B68EE", "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#FFB6C1", "#DDA15E", "#BC6C25"]`
+- Ensures variety and visual distinction between shapes
 
 ### Firebase Realtime Database: `presence` (for cursors)
 
@@ -407,9 +454,9 @@
 
 **Frontend:** React + Vite + Konva.js + Tailwind  
 **Backend:** Firebase (Authentication + Firestore + Realtime Database)  
-**Deployment:** Firebase Hosting or Vercel
+**Deployment:** Firebase Hosting
 
-**Rationale:** Given the 24-hour constraint, Firebase provides the fastest path to a working MVP. Authentication is solved, real-time is built-in, and deployment is simple. You can always migrate later if needed.
+**Rationale:** Firebase provides a fully integrated solution - authentication, real-time database, and hosting all in one ecosystem. This minimizes configuration complexity and ensures optimal performance between services. Firebase Hosting offers automatic SSL, global CDN, and seamless integration with Firebase Auth and databases.
 
 ---
 
@@ -442,8 +489,14 @@
 - Performance monitoring/analytics
 - User permissions/roles
 - Canvas history/versioning
-- Optimistic updates (can add if time allows)
-- Advanced locking mechanisms
+- Optimistic updates (out of scope for MVP - all updates wait for server confirmation)
+- Advanced locking mechanisms beyond basic first-come lock
+
+**Technical Priorities:**
+
+- Focus on server-authoritative state to ensure consistency
+- Accept slight latency (~100ms) for operations in exchange for reliability
+- Cursor movements use optimistic rendering for smooth UX (only exception)
 
 ---
 
@@ -452,7 +505,7 @@
 1. **Single Global Canvas**: All users share one global canvas (multi-project support in Phase 2)
 2. **Basic Shapes**: Rectangles only (other shapes in future releases)
 3. **Simple Locking**: First-come lock mechanism (not CRDT or OT)
-4. **No Styling**: Fixed gray fill color for all rectangles
+4. **Limited Styling**: Random fill colors only, no borders/shadows/gradients or style customization
 5. **No History**: No undo/redo or version control
 6. **Desktop Only**: Not optimized for mobile/tablet
 7. **Fixed Canvas Size**: 5000x5000px limit (not infinite canvas)
@@ -532,7 +585,7 @@
 **Mitigation:** Use canvas-based rendering (Konva), not DOM elements; limit to 500 shapes for MVP
 
 **Third Risk:** Locking mechanism causing deadlocks  
-**Mitigation:** Implement automatic lock timeout (3-5 seconds); clear visual feedback for lock state
+**Mitigation:** Implement automatic lock timeout (5 seconds of inactivity); clear visual feedback for lock state with user name badge
 
 **Fourth Risk:** Cursor updates causing performance issues  
-**Mitigation:** Use Firebase Realtime Database (not Firestore) for cursor positions; throttle updates to 20-30 FPS
+**Mitigation:** Use Firebase Realtime Database (not Firestore) for cursor positions; throttle updates to 25 FPS (40ms intervals) with smooth interpolation

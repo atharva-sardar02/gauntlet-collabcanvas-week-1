@@ -212,6 +212,8 @@ collabcanvas/
 
   - Files to create: `src/utils/constants.js`
   - Define: `CANVAS_WIDTH = 5000`, `CANVAS_HEIGHT = 5000`, `VIEWPORT_WIDTH`, `VIEWPORT_HEIGHT`
+  - Define: `CANVAS_CENTER_X = 2500`, `CANVAS_CENTER_Y = 2500` (initial view position)
+  - Define: `GRID_SPACING = 1000` (for visual grid)
 
 - [ ] **3.2: Create Canvas Context**
 
@@ -224,11 +226,14 @@ collabcanvas/
   - Files to create: `src/components/Canvas/Canvas.jsx`
   - Set up Konva Stage and Layer
   - Container div with fixed dimensions
-  - Background color/grid (optional)
+  - Light gray background with subtle grid (1000px spacing)
+  - Canvas starts centered at (2500, 2500) for new users
+  - Subtle gray border at canvas edges (visual boundary indicator)
 
 - [ ] **3.4: Implement Pan Functionality**
 
   - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Enable panning via space bar + drag or middle mouse button
   - Handle `onDragMove` on Stage
   - Constrain panning to canvas bounds (5000x5000px)
   - Prevent objects from being placed/moved outside boundaries
@@ -243,8 +248,9 @@ collabcanvas/
 - [ ] **3.6: Create Canvas Controls Component**
 
   - Files to create: `src/components/Canvas/CanvasControls.jsx`
-  - Buttons: "Zoom In", "Zoom Out", "Reset View", "Add Shape"
+  - Buttons: "Zoom In", "Zoom Out", "Reset View"
   - Position: Fixed/floating on canvas
+  - Note: "Add Shape" button removed - shapes created via click-and-drag interaction
 
 - [ ] **3.7: Add Canvas to App**
   - Files to update: `src/App.jsx`
@@ -254,11 +260,14 @@ collabcanvas/
 **PR Checklist:**
 
 - [ ] Canvas renders at correct size (5000x5000px)
-- [ ] Can pan by dragging canvas background
+- [ ] Canvas starts centered at (2500, 2500)
+- [ ] Visual grid with 1000px spacing visible
+- [ ] Subtle gray border at canvas edges visible
+- [ ] Can pan via space bar + drag or middle mouse button
 - [ ] Can zoom with mousewheel
 - [ ] Zoom centers on cursor position
 - [ ] Reset view button works
-- [ ] Canvas boundaries are enforced (optional: visual indicators)
+- [ ] Canvas boundaries are enforced with visual indicators
 - [ ] 60 FPS maintained during pan/zoom
 
 ---
@@ -275,45 +284,53 @@ collabcanvas/
   - Files to create: `src/components/Canvas/Shape.jsx`
   - Support: **Rectangles only for MVP**
   - Props: `id`, `x`, `y`, `width`, `height`, `fill`, `isSelected`, `isLocked`, `lockedBy`
+  - Visual feedback: Highlighted border when selected, colored border with user badge when locked
 
-- [ ] **4.2: Add Shape Creation Logic**
+- [ ] **4.2: Define Shape Color Palette**
+
+  - Files to update: `src/utils/constants.js`
+  - Define: `SHAPE_COLORS = ["#7B68EE", "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#FFB6C1", "#DDA15E", "#BC6C25"]`
+  - Function: `getRandomShapeColor()` to pick random color from palette
+
+- [ ] **4.3: Add Shape Creation Logic (Click-and-Drag)**
 
   - Files to update: `src/contexts/CanvasContext.jsx`
-  - Function: `addShape(type, position)`
+  - Function: `addShape(type, startPos, endPos)` - creates rectangle from drag start to drag end
   - Generate unique ID for each shape
-  - Default properties: 100x100px, fixed gray fill (#cccccc)
+  - Default properties: random fill color from SHAPE_COLORS palette
+  - Minimum size: 10x10px (prevent accidental tiny shapes)
+  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Implement click-and-drag rectangle creation (draw mode by default)
+  - Show preview rectangle while dragging
+  - Finalize shape on mouse release
 
-- [ ] **4.3: Implement Shape Rendering**
+- [ ] **4.4: Implement Shape Rendering**
 
   - Files to update: `src/components/Canvas/Canvas.jsx`
   - Map over `shapes` array
   - Render Shape component for each
 
-- [ ] **4.4: Add Shape Selection**
+- [ ] **4.5: Add Shape Selection**
 
   - Files to update: `src/components/Canvas/Shape.jsx`
   - Handle `onClick` to set selected
-  - Visual feedback: border/outline when selected
+  - Visual feedback: highlighted border when selected
   - Files to update: `src/contexts/CanvasContext.jsx`
   - State: `selectedId`
 
-- [ ] **4.5: Implement Shape Dragging**
+- [ ] **4.6: Implement Shape Dragging**
 
   - Files to update: `src/components/Canvas/Shape.jsx`
-  - Enable `draggable={true}`
+  - Enable `draggable={true}` (separate from draw mode)
   - Handle `onDragEnd` to update position
+  - Constrain dragging within canvas boundaries
   - Files to update: `src/contexts/CanvasContext.jsx`
   - Function: `updateShape(id, updates)`
 
-- [ ] **4.6: Add Click-to-Deselect**
+- [ ] **4.7: Add Click-to-Deselect**
 
   - Files to update: `src/components/Canvas/Canvas.jsx`
-  - Handle Stage `onClick` to deselect when clicking background
-
-- [ ] **4.7: Connect "Add Shape" Button**
-
-  - Files to update: `src/components/Canvas/CanvasControls.jsx`
-  - Button creates shape at center of current viewport
+  - Handle Stage `onClick` to deselect when clicking empty canvas
 
 - [ ] **4.8: Add Delete Functionality**
   - Files to update: `src/contexts/CanvasContext.jsx`
@@ -325,11 +342,14 @@ collabcanvas/
 
 **PR Checklist:**
 
-- [ ] Can create rectangles via button
-- [ ] Rectangles render at correct positions with gray fill
-- [ ] Can select rectangles by clicking
-- [ ] Can drag rectangles smoothly
-- [ ] Selection state shows visually
+- [ ] Can create rectangles via click-and-drag interaction
+- [ ] Preview rectangle shows while dragging
+- [ ] Rectangles have random colors from predefined palette
+- [ ] Minimum rectangle size enforced (10x10px)
+- [ ] Rectangles render at correct positions with random fill colors
+- [ ] Can select rectangles by clicking (highlighted border shows)
+- [ ] Can drag rectangles smoothly (separate from drawing)
+- [ ] Selection state shows visually with highlighted border
 - [ ] Can delete selected rectangle with Delete/Backspace key
 - [ ] Clicking another shape deselects the previous one
 - [ ] Clicking empty canvas deselects current selection
@@ -360,13 +380,14 @@ collabcanvas/
           y: number,
           width: number,
           height: number,
-          fill: string,
+          fill: string (random color from SHAPE_COLORS palette),
           createdBy: string (userId),
           createdAt: timestamp,
           lastModifiedBy: string,
           lastModifiedAt: timestamp,
           isLocked: boolean,
-          lockedBy: string (userId) or null
+          lockedBy: string (userId) or null,
+          lockedByColor: string (cursor color of locking user) or null
         }
       ],
       lastUpdated: timestamp
@@ -399,11 +420,17 @@ collabcanvas/
 
   - Files to update: `src/services/canvas.js`
   - Strategy: First user to select/drag acquires lock
-  - Function: `lockShape(canvasId, shapeId, userId)`
+  - Function: `lockShape(canvasId, shapeId, userId, userColor)`
   - Function: `unlockShape(canvasId, shapeId)`
-  - Auto-release lock after drag completes or timeout (3-5 seconds)
-  - Visual indicator showing which user has locked an object
+  - Auto-release lock after drag completes or timeout (5 seconds of inactivity)
+  - Lock timeout resets if user continues dragging (active drag)
+  - Visual indicators:
+    - Locked shapes show colored border matching user's cursor color
+    - Small badge with user's name appears near locked shape
+    - Tooltip "Locked by [username]" when attempting to move locked shape
   - Other users cannot move locked objects
+  - Files to update: `src/components/Canvas/Shape.jsx`
+  - Render lock visual indicators (colored border + user badge)
 
 - [ ] **5.6: Add Loading States**
 
@@ -412,7 +439,14 @@ collabcanvas/
   - Files to update: `src/components/Canvas/Canvas.jsx`
   - Display "Loading canvas..." message
 
-- [ ] **5.7: Handle Offline/Reconnection**
+- [ ] **5.7: Implement Server-Authoritative Updates**
+
+  - Files to update: `src/contexts/CanvasContext.jsx`
+  - All shape operations wait for server confirmation (no optimistic updates)
+  - Accept ~100ms latency for operations in exchange for reliability
+  - Show loading/pending state during operations
+
+- [ ] **5.8: Handle Offline/Reconnection**
   - Files to update: `src/hooks/useCanvas.js`
   - Enable Firestore offline persistence
   - Show reconnection status
@@ -422,15 +456,20 @@ collabcanvas/
 - [ ] Open two browsers: creating shape in one appears in other
 - [ ] User A starts dragging shape → shape locks for User A
 - [ ] User B cannot move shape while User A has it locked
-- [ ] Lock shows visual indicator (e.g., different border color)
+- [ ] Lock shows visual indicators:
+  - Colored border matching User A's cursor color
+  - Small badge with User A's name near shape
+  - Tooltip "Locked by [username]" on hover attempt
 - [ ] Lock releases automatically when User A stops dragging
-- [ ] Lock releases after timeout (3-5 seconds) if User A disconnects mid-drag
-- [ ] Moving shape in one browser updates in other (<100ms)
+- [ ] Lock releases after timeout (5 seconds of inactivity)
+- [ ] Lock timeout resets during active dragging
+- [ ] Moving shape in one browser updates in other (~100ms, server-authoritative)
 - [ ] Deleting shape in one removes from other
 - [ ] Cannot delete shapes locked by other users
 - [ ] Page refresh loads all existing shapes
 - [ ] All users leave and return: shapes still there
 - [ ] No duplicate shapes or sync issues
+- [ ] All operations wait for server confirmation (no optimistic updates except cursors)
 
 ---
 
@@ -467,7 +506,9 @@ collabcanvas/
   - Files to create: `src/hooks/useCursors.js`
   - Track mouse position on canvas
   - Convert screen coords to canvas coords
-  - Throttle updates to ~60Hz (16ms)
+  - Throttle updates to 25 FPS (40ms intervals)
+  - Smooth interpolation between updates to prevent jitter
+  - Optimistic rendering (only exception to server-authoritative rule)
   - Return: `cursors` object (keyed by userId)
 
 - [ ] **6.4: Build Cursor Component**
@@ -486,9 +527,11 @@ collabcanvas/
 
 - [ ] **6.6: Assign User Colors**
 
-  - Files to create: `src/utils/helpers.js`
-  - Function: `generateUserColor(userId)` - randomly assigned on join
-  - Color palette: 8-10 distinct colors with sufficient contrast
+  - Files to update: `src/utils/constants.js`
+  - Define: `CURSOR_COLORS = ["#FF5733", "#33C1FF", "#FFC300", "#DAF7A6", "#C70039", "#900C3F", "#581845", "#28B463", "#3498DB"]`
+  - Files to create/update: `src/utils/helpers.js`
+  - Function: `getRandomCursorColor()` - randomly assigned on join
+  - Ensure sufficient contrast against light backgrounds
   - Maintain color consistency per user throughout session
 
 - [ ] **6.7: Handle Cursor Cleanup**
@@ -499,8 +542,9 @@ collabcanvas/
 
 - [ ] **6.8: Optimize Cursor Updates**
   - Files to update: `src/hooks/useCursors.js`
-  - Throttle mouse events to 20-30 FPS (not full 60Hz)
+  - Throttle mouse events to 25 FPS (40ms intervals)
   - Only send if position changed significantly (>2px)
+  - Smooth interpolation for received cursor positions
 
 **PR Checklist:**
 
@@ -554,8 +598,11 @@ collabcanvas/
 
   - Files to create: `src/components/Collaboration/PresenceList.jsx`
   - Display list of online users
-  - Show user color dot + name
+  - Compact user pills/avatars showing name and cursor color
   - Show count: "3 users online"
+  - Position: Fixed in top-right corner of viewport
+  - Collapses to just count on smaller screens
+  - Expandable to show full list of users
 
 - [ ] **7.5: Build User Presence Badge**
 
@@ -563,11 +610,13 @@ collabcanvas/
   - Avatar/initial with user color
   - Tooltip with full name
 
-- [ ] **7.6: Add Presence to Navbar**
+- [ ] **7.6: Add Presence to Layout**
 
-  - Files to update: `src/components/Layout/Navbar.jsx`
+  - Files to update: `src/components/Layout/Navbar.jsx` or `src/App.jsx`
   - Include PresenceList component
-  - Position in top-right corner
+  - Position in top-right corner (fixed position)
+  - Ensure it doesn't obstruct canvas work area
+  - Show subtle toast notifications for join/leave events
 
 - [ ] **7.7: Integrate Presence System**
   - Files to update: `src/App.jsx`
@@ -577,11 +626,14 @@ collabcanvas/
 **PR Checklist:**
 
 - [ ] Current user appears in presence list
-- [ ] Other users appear when they join
-- [ ] Users disappear when they leave
-- [ ] User count is accurate
+- [ ] Other users appear when they join (with subtle toast notification)
+- [ ] Users disappear when they leave (with subtle toast notification)
+- [ ] User count is accurate (e.g., "3 users online")
 - [ ] Colors match cursor colors
 - [ ] Updates happen in real-time
+- [ ] Presence list positioned in top-right corner
+- [ ] List doesn't obstruct canvas work area
+- [ ] Can expand/collapse list on smaller screens
 
 ---
 
@@ -654,10 +706,10 @@ collabcanvas/
 
 ---
 
-## PR #9: Deployment & Final Prep
+## PR #9: Deployment to Firebase Hosting & Final Prep
 
 **Branch:** `deploy/production`  
-**Goal:** Deploy to production and finalize documentation
+**Goal:** Deploy to Firebase Hosting and finalize documentation
 
 ### Tasks:
 
@@ -733,14 +785,34 @@ collabcanvas/
 ### Required Features:
 
 - [ ] Basic canvas with pan/zoom (5000x5000px with boundaries)
-- [ ] Rectangle shapes with gray fill (#cccccc)
+  - [ ] Canvas starts centered at (2500, 2500)
+  - [ ] Visual grid with 1000px spacing
+  - [ ] Subtle gray border at canvas edges
+  - [ ] Pan via space bar or middle mouse button
+- [ ] Rectangle shapes with random fill colors from predefined palette
+  - [ ] Click-and-drag to create rectangles (draw mode by default)
+  - [ ] Minimum size 10x10px enforced
+  - [ ] Preview rectangle while dragging
 - [ ] Ability to create, move, and delete objects
+  - [ ] Highlighted border for selected shapes
+  - [ ] Delete with Delete/Backspace key
 - [ ] Object locking (first user to drag locks the object)
-- [ ] Real-time sync between 2+ users (<100ms)
+  - [ ] Colored border matching user's cursor color
+  - [ ] User name badge near locked shape
+  - [ ] 5-second timeout on inactivity
+  - [ ] Tooltip "Locked by [username]" on attempt to move
+- [ ] Real-time sync between 2+ users (~100ms, server-authoritative)
+  - [ ] All operations wait for server confirmation
+  - [ ] No optimistic updates (except cursors)
 - [ ] Multiplayer cursors with name labels and unique colors
+  - [ ] 25 FPS throttle (40ms intervals)
+  - [ ] Smooth interpolation between updates
 - [ ] Presence awareness (who's online)
+  - [ ] Fixed position in top-right corner
+  - [ ] Shows user count and expandable list
+  - [ ] Subtle toast notifications for join/leave
 - [ ] User authentication (email/password AND Google login)
-- [ ] Deployed and publicly accessible
+- [ ] Deployed to Firebase Hosting and publicly accessible
 
 ### Performance Targets:
 
@@ -753,12 +825,20 @@ collabcanvas/
 ### Testing Scenarios:
 
 - [ ] 2 users editing simultaneously in different browsers
-- [ ] User A drags shape → User B sees it locked and cannot move it
+- [ ] User A drags shape → User B sees it locked with colored border and name badge
+- [ ] User B cannot move locked shape → sees "Locked by User A" tooltip
 - [ ] Lock releases when User A stops dragging → User B can now move it
+- [ ] Lock releases after 5 seconds of inactivity
 - [ ] User A deletes shape → disappears for User B immediately
+- [ ] User A creates shape via click-and-drag → User B sees it appear with random color
+- [ ] Preview rectangle shows while dragging to create new shape
+- [ ] Minimum size (10x10px) enforced during shape creation
 - [ ] One user refreshing mid-edit confirms state persistence
-- [ ] Multiple shapes created and moved rapidly to test sync performance
-- [ ] Test with 500+ rectangles to verify performance target
+- [ ] Multiple shapes created and moved rapidly to test sync performance (~100ms latency)
+- [ ] Test with 500+ rectangles to verify performance target (60 FPS maintained)
+- [ ] Cursor movements smooth at 25 FPS with interpolation
+- [ ] Presence list shows accurate user count in top-right corner
+- [ ] Canvas starts centered at (2500, 2500) with visible grid
 
 ---
 
