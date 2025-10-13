@@ -5,7 +5,10 @@ import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
 import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
+import PresenceList from '../Collaboration/PresenceList';
 import { useCursors } from '../../hooks/useCursors';
+import { usePresence } from '../../hooks/usePresence';
+import { useAuth } from '../../hooks/useAuth';
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -39,7 +42,13 @@ const Canvas = () => {
   const [newShape, setNewShape] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Cursor tracking
-  const { cursors, updateCursorPosition } = useCursors();
+  const { cursors, userColor, updateCursorPosition } = useCursors();
+
+  // Presence tracking (use same color as cursor)
+  const { onlineUsers } = usePresence(userColor);
+
+  // Current user for presence list
+  const { currentUser } = useAuth();
 
   // Set the stage ref in context
   useEffect(() => {
@@ -541,6 +550,12 @@ const Canvas = () => {
           name={cursorData.displayName}
         />
       ))}
+
+      {/* Presence List */}
+      <PresenceList 
+        users={onlineUsers} 
+        currentUserId={currentUser?.uid}
+      />
     </div>
   );
 };

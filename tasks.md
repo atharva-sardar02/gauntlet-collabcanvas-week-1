@@ -563,7 +563,7 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **7.1: Design Presence Schema**
+- [x] **7.1: Design Presence Schema**
 
   - Path: `/sessions/global-canvas-v1/{userId}` (same as cursors)
   - Data structure (combined with cursor data):
@@ -578,24 +578,24 @@ collabcanvas/
     ```
   - Note: Presence and cursor data share same RTDB location
 
-- [ ] **7.2: Create Presence Service**
+- [x] **7.2: Create Presence Service**
 
-  - Files to create: `src/services/presence.js`
+  - Files to create: `src/services/presence.ts`
   - Function: `setUserOnline(canvasId, userId, name, color)`
   - Function: `setUserOffline(canvasId, userId)`
   - Function: `subscribeToPresence(canvasId, callback)`
   - Use `onDisconnect()` to auto-set offline
 
-- [ ] **7.3: Create Presence Hook**
+- [x] **7.3: Create Presence Hook**
 
-  - Files to create: `src/hooks/usePresence.js`
+  - Files to create: `src/hooks/usePresence.ts`
   - Set user online on mount
   - Subscribe to presence changes
   - Return: `onlineUsers` array
 
-- [ ] **7.4: Build Presence List Component**
+- [x] **7.4: Build Presence List Component**
 
-  - Files to create: `src/components/Collaboration/PresenceList.jsx`
+  - Files to create: `src/components/Collaboration/PresenceList.tsx`
   - Display list of online users
   - Compact user pills/avatars showing name and cursor color
   - Show count: "3 users online"
@@ -603,22 +603,22 @@ collabcanvas/
   - Collapses to just count on smaller screens
   - Expandable to show full list of users
 
-- [ ] **7.5: Build User Presence Badge**
+- [x] **7.5: Build User Presence Badge**
 
-  - Files to create: `src/components/Collaboration/UserPresence.jsx`
+  - Files to create: `src/components/Collaboration/UserPresence.tsx`
   - Avatar/initial with user color
   - Tooltip with full name
 
-- [ ] **7.6: Add Presence to Layout**
+- [x] **7.6: Add Presence to Layout**
 
-  - Files to update: `src/components/Layout/Navbar.jsx` or `src/App.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Include PresenceList component
   - Position in top-right corner (fixed position)
   - Ensure it doesn't obstruct canvas work area
   - Show subtle toast notifications for join/leave events
 
-- [ ] **7.7: Integrate Presence System**
-  - Files to update: `src/App.jsx`
+- [x] **7.7: Integrate Presence System**
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Initialize presence when canvas loads
   - Clean up on unmount
 
