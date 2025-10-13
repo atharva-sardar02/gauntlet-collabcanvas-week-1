@@ -3,32 +3,25 @@ import AuthProvider from './components/Auth/AuthProvider';
 import Login from './components/Auth/Login';
 import Signup from './components/Auth/Signup';
 import Navbar from './components/Layout/Navbar';
+import Canvas from './components/Canvas/Canvas';
+import { CanvasProvider } from './contexts/CanvasContext';
 import { useAuth } from './hooks/useAuth';
 import './App.css';
 
 /**
  * Main authenticated app view
- * This will later contain the Canvas component
+ * Contains the Canvas component wrapped in CanvasProvider
  */
 const AuthenticatedApp = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">
-            Welcome to CollabCanvas! 🎨
-          </h2>
-          <p className="text-gray-600 mb-4">
-            You are now authenticated and ready to collaborate.
-          </p>
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg">
-            <p className="font-semibold">✓ Authentication System Complete!</p>
-            <p className="text-sm mt-1">Canvas component will be added in the next PR.</p>
-          </div>
+    <CanvasProvider>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar />
+        <div className="flex-1 overflow-hidden">
+          <Canvas />
         </div>
       </div>
-    </div>
+    </CanvasProvider>
   );
 };
 

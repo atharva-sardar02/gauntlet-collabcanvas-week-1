@@ -89,7 +89,6 @@ collabcanvas/
   - Install:
     ```bash
     npm install firebase konva react-konva
-    npm install -D tailwindcss postcss autoprefixer
     ```
 
 - [x] **1.3: Configure Tailwind CSS**
@@ -208,52 +207,52 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **3.1: Create Canvas Constants**
+- [x] **3.1: Create Canvas Constants**
 
-  - Files to create: `src/utils/constants.js`
+  - Files to create: `src/utils/constants.ts`
   - Define: `CANVAS_WIDTH = 5000`, `CANVAS_HEIGHT = 5000`, `VIEWPORT_WIDTH`, `VIEWPORT_HEIGHT`
   - Define: `CANVAS_CENTER_X = 2500`, `CANVAS_CENTER_Y = 2500` (initial view position)
   - Define: `GRID_SPACING = 1000` (for visual grid)
 
-- [ ] **3.2: Create Canvas Context**
+- [x] **3.2: Create Canvas Context**
 
-  - Files to create: `src/contexts/CanvasContext.jsx`
+  - Files to create: `src/contexts/CanvasContext.tsx`
   - State: `shapes`, `selectedId`, `stageRef`
   - Provide methods to add/update/delete shapes
 
-- [ ] **3.3: Build Base Canvas Component**
+- [x] **3.3: Build Base Canvas Component**
 
-  - Files to create: `src/components/Canvas/Canvas.jsx`
+  - Files to create: `src/components/Canvas/Canvas.tsx`
   - Set up Konva Stage and Layer
   - Container div with fixed dimensions
   - Light gray background with subtle grid (1000px spacing)
   - Canvas starts centered at (2500, 2500) for new users
   - Subtle gray border at canvas edges (visual boundary indicator)
 
-- [ ] **3.4: Implement Pan Functionality**
+- [x] **3.4: Implement Pan Functionality**
 
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Enable panning via space bar + drag or middle mouse button
   - Handle `onDragMove` on Stage
   - Constrain panning to canvas bounds (5000x5000px)
   - Prevent objects from being placed/moved outside boundaries
 
-- [ ] **3.5: Implement Zoom Functionality**
+- [x] **3.5: Implement Zoom Functionality**
 
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Handle `onWheel` event
   - Zoom to cursor position
   - Min zoom: 0.1, Max zoom: 3
 
-- [ ] **3.6: Create Canvas Controls Component**
+- [x] **3.6: Create Canvas Controls Component**
 
-  - Files to create: `src/components/Canvas/CanvasControls.jsx`
+  - Files to create: `src/components/Canvas/CanvasControls.tsx`
   - Buttons: "Zoom In", "Zoom Out", "Reset View"
   - Position: Fixed/floating on canvas
   - Note: "Add Shape" button removed - shapes created via click-and-drag interaction
 
-- [ ] **3.7: Add Canvas to App**
-  - Files to update: `src/App.jsx`
+- [x] **3.7: Add Canvas to App**
+  - Files to update: `src/App.tsx`
   - Wrap Canvas in CanvasContext
   - Include Navbar and Canvas
 
