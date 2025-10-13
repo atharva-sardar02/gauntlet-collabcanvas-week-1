@@ -3,6 +3,7 @@ import { Stage, Layer, Rect, Line } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
+import Shape from './Shape';
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -12,7 +13,9 @@ import {
   MIN_ZOOM,
   MAX_ZOOM,
   DEFAULT_ZOOM,
+  MIN_SHAPE_SIZE,
   getViewportDimensions,
+  getRandomShapeColor,
 } from '../../utils/constants';
 
 const Canvas = () => {
@@ -22,12 +25,16 @@ const Canvas = () => {
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { setStageRef, selectShape } = context;
+  const { shapes, selectedId, setStageRef, selectShape, addShape, updateShape, deleteShape } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
+  
+  // Shape drawing state
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [newShape, setNewShape] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Set the stage ref in context
   useEffect(() => {
@@ -46,10 +53,22 @@ const Canvas = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Handle keyboard events for spacebar panning
+  // Handle keyboard events for spacebar panning and delete
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !spacePressed) {
+      // Delete key functionality
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
+        e.preventDefault();
+        const shape = shapes.find(s => s.id === selectedId);
+        // Only delete if not locked by another user
+        if (shape && !shape.isLocked) {
+          deleteShape(selectedId);
+        }
+        return;
+      }
+
+      // Spacebar panning
+      if (e.code === 'Space' && !spacePressed && !isDrawing) {
         e.preventDefault();
         setSpacePressed(true);
         if (stageRef.current) {
@@ -76,7 +95,7 @@ const Canvas = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [spacePressed]);
+  }, [spacePressed, selectedId, shapes, deleteShape, isDrawing]);
 
   // Calculate initial position to center the canvas
   const initialX = -CANVAS_CENTER_X + dimensions.width / 2;
@@ -102,21 +121,69 @@ const Canvas = () => {
   };
 
   /**
-   * Handle mouse down for panning
+   * Get relative pointer position on the canvas
+   */
+  const getRelativePointerPosition = () => {
+    const stage = stageRef.current;
+    if (!stage) return null;
+
+    const transform = stage.getAbsoluteTransform().copy();
+    transform.invert();
+
+    const pos = stage.getPointerPosition();
+    if (!pos) return null;
+
+    return transform.point(pos);
+  };
+
+  /**
+   * Handle mouse down - start drawing shape or panning
    */
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Enable panning with middle mouse button or space + left click
+    // Panning with middle mouse button or space + left click
     if (e.evt.button === 1 || (spacePressed && e.evt.button === 0)) {
       e.evt.preventDefault();
       setIsPanning(true);
       if (stageRef.current) {
         stageRef.current.container().style.cursor = 'grabbing';
       }
+      return;
+    }
+
+    // Start drawing shape with left click on empty canvas
+    if (e.evt.button === 0 && !spacePressed && e.target === e.target.getStage()) {
+      const pos = getRelativePointerPosition();
+      if (pos) {
+        setIsDrawing(true);
+        setNewShape({
+          x: pos.x,
+          y: pos.y,
+          width: 0,
+          height: 0,
+        });
+      }
     }
   };
 
   /**
-   * Handle mouse up for panning
+   * Handle mouse move - update shape preview while drawing
+   */
+  const handleMouseMove = () => {
+    if (!isDrawing || !newShape) return;
+
+    const pos = getRelativePointerPosition();
+    if (!pos) return;
+
+    setNewShape({
+      x: Math.min(pos.x, newShape.x),
+      y: Math.min(pos.y, newShape.y),
+      width: Math.abs(pos.x - newShape.x),
+      height: Math.abs(pos.y - newShape.y),
+    });
+  };
+
+  /**
+   * Handle mouse up - finalize shape creation or end panning
    */
   const handleMouseUp = () => {
     if (isPanning) {
@@ -124,6 +191,23 @@ const Canvas = () => {
       if (stageRef.current) {
         stageRef.current.container().style.cursor = spacePressed ? 'grab' : 'default';
       }
+    }
+
+    if (isDrawing && newShape) {
+      // Only create shape if it meets minimum size
+      if (newShape.width >= MIN_SHAPE_SIZE && newShape.height >= MIN_SHAPE_SIZE) {
+        addShape({
+          type: 'rectangle',
+          x: newShape.x,
+          y: newShape.y,
+          width: newShape.width,
+          height: newShape.height,
+          fill: getRandomShapeColor(),
+          createdAt: Date.now(),
+        });
+      }
+      setIsDrawing(false);
+      setNewShape(null);
     }
   };
 
@@ -154,12 +238,10 @@ const Canvas = () => {
       y: (pointer.y - stage.y()) / oldScale,
     };
 
-    // Calculate new scale
     const direction = e.evt.deltaY > 0 ? -1 : 1;
     const scaleBy = 1.05;
     let newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
 
-    // Constrain scale
     newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
 
     stage.scale({ x: newScale, y: newScale });
@@ -178,10 +260,27 @@ const Canvas = () => {
    * Handle stage click to deselect shapes
    */
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Deselect if clicking on stage background
     if (e.target === e.target.getStage()) {
       selectShape(null);
     }
+  };
+
+  /**
+   * Handle shape selection
+   */
+  const handleShapeSelect = (id: string) => {
+    selectShape(id);
+  };
+
+  /**
+   * Handle shape drag end - update shape position
+   */
+  const handleShapeDragEnd = (id: string) => (e: Konva.KonvaEventObject<DragEvent>) => {
+    const node = e.target;
+    updateShape(id, {
+      x: node.x(),
+      y: node.y(),
+    });
   };
 
   /**
@@ -261,12 +360,10 @@ const Canvas = () => {
 
   /**
    * Generate grid lines for visual reference
-   * Creates vertical and horizontal lines at GRID_SPACING intervals
    */
   const generateGridLines = () => {
     const lines = [];
     
-    // Vertical lines
     for (let i = 0; i <= CANVAS_WIDTH; i += GRID_SPACING) {
       lines.push(
         <Line
@@ -279,7 +376,6 @@ const Canvas = () => {
       );
     }
     
-    // Horizontal lines
     for (let i = 0; i <= CANVAS_HEIGHT; i += GRID_SPACING) {
       lines.push(
         <Line
@@ -307,6 +403,7 @@ const Canvas = () => {
         scaleY={scale}
         draggable={isPanning || spacePressed}
         onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onDragMove={handleDragMove}
         onWheel={handleWheel}
@@ -314,7 +411,6 @@ const Canvas = () => {
       >
         {/* Background Layer */}
         <Layer>
-          {/* Canvas background */}
           <Rect
             x={0}
             y={0}
@@ -324,10 +420,8 @@ const Canvas = () => {
             listening={false}
           />
           
-          {/* Grid lines */}
           {generateGridLines()}
           
-          {/* Canvas border */}
           <Rect
             x={0}
             y={0}
@@ -339,9 +433,34 @@ const Canvas = () => {
           />
         </Layer>
 
-        {/* Shapes Layer (will be populated later) */}
+        {/* Shapes Layer */}
         <Layer>
-          {/* Shapes will be rendered here in future tasks */}
+          {/* Render existing shapes */}
+          {shapes.map((shape) => (
+            <Shape
+              key={shape.id}
+              shape={shape}
+              isSelected={shape.id === selectedId}
+              onSelect={() => handleShapeSelect(shape.id)}
+              onDragEnd={handleShapeDragEnd(shape.id)}
+            />
+          ))}
+
+          {/* Preview of shape being drawn */}
+          {isDrawing && newShape && newShape.width > 0 && newShape.height > 0 && (
+            <Rect
+              x={newShape.x}
+              y={newShape.y}
+              width={newShape.width}
+              height={newShape.height}
+              fill={getRandomShapeColor()}
+              opacity={0.5}
+              stroke="#0066ff"
+              strokeWidth={2}
+              dash={[10, 5]}
+              listening={false}
+            />
+          )}
         </Layer>
       </Stage>
 
@@ -356,13 +475,16 @@ const Canvas = () => {
       {/* Canvas Info Overlay */}
       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md">
         <p className="text-sm text-gray-700">
-          <span className="font-semibold">Canvas:</span> {CANVAS_WIDTH}x{CANVAS_HEIGHT}px
+          <span className="font-semibold">Shapes:</span> {shapes.length}
         </p>
         <p className="text-sm text-gray-700">
           <span className="font-semibold">Zoom:</span> {Math.round(scale * 100)}%
         </p>
         <p className="text-sm text-gray-500 text-xs mt-1">
-          Space + Drag or Middle Mouse to Pan
+          Click & Drag to create shapes
+        </p>
+        <p className="text-sm text-gray-500 text-xs">
+          Delete/Backspace to remove
         </p>
       </div>
     </div>

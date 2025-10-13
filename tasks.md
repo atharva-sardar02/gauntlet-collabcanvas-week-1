@@ -278,63 +278,63 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **4.1: Create Shape Component**
+- [x] **4.1: Create Shape Component**
 
-  - Files to create: `src/components/Canvas/Shape.jsx`
+  - Files to create: `src/components/Canvas/Shape.tsx`
   - Support: **Rectangles only for MVP**
   - Props: `id`, `x`, `y`, `width`, `height`, `fill`, `isSelected`, `isLocked`, `lockedBy`
   - Visual feedback: Highlighted border when selected, colored border with user badge when locked
 
-- [ ] **4.2: Define Shape Color Palette**
+- [x] **4.2: Define Shape Color Palette**
 
-  - Files to update: `src/utils/constants.js`
+  - Files to update: `src/utils/constants.ts`
   - Define: `SHAPE_COLORS = ["#7B68EE", "#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#FFB6C1", "#DDA15E", "#BC6C25"]`
   - Function: `getRandomShapeColor()` to pick random color from palette
 
-- [ ] **4.3: Add Shape Creation Logic (Click-and-Drag)**
+- [x] **4.3: Add Shape Creation Logic (Click-and-Drag)**
 
-  - Files to update: `src/contexts/CanvasContext.jsx`
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - Function: `addShape(type, startPos, endPos)` - creates rectangle from drag start to drag end
   - Generate unique ID for each shape
   - Default properties: random fill color from SHAPE_COLORS palette
   - Minimum size: 10x10px (prevent accidental tiny shapes)
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Implement click-and-drag rectangle creation (draw mode by default)
   - Show preview rectangle while dragging
   - Finalize shape on mouse release
 
-- [ ] **4.4: Implement Shape Rendering**
+- [x] **4.4: Implement Shape Rendering**
 
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Map over `shapes` array
   - Render Shape component for each
 
-- [ ] **4.5: Add Shape Selection**
+- [x] **4.5: Add Shape Selection**
 
-  - Files to update: `src/components/Canvas/Shape.jsx`
+  - Files to update: `src/components/Canvas/Shape.tsx`
   - Handle `onClick` to set selected
   - Visual feedback: highlighted border when selected
-  - Files to update: `src/contexts/CanvasContext.jsx`
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - State: `selectedId`
 
-- [ ] **4.6: Implement Shape Dragging**
+- [x] **4.6: Implement Shape Dragging**
 
-  - Files to update: `src/components/Canvas/Shape.jsx`
+  - Files to update: `src/components/Canvas/Shape.tsx`
   - Enable `draggable={true}` (separate from draw mode)
   - Handle `onDragEnd` to update position
   - Constrain dragging within canvas boundaries
-  - Files to update: `src/contexts/CanvasContext.jsx`
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - Function: `updateShape(id, updates)`
 
-- [ ] **4.7: Add Click-to-Deselect**
+- [x] **4.7: Add Click-to-Deselect**
 
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Handle Stage `onClick` to deselect when clicking empty canvas
 
-- [ ] **4.8: Add Delete Functionality**
-  - Files to update: `src/contexts/CanvasContext.jsx`
+- [x] **4.8: Add Delete Functionality**
+  - Files to update: `src/contexts/CanvasContext.tsx`
   - Function: `deleteShape(id)`
-  - Files to update: `src/components/Canvas/Canvas.jsx`
+  - Files to update: `src/components/Canvas/Canvas.tsx`
   - Add keyboard listener for Delete/Backspace key
   - Delete selected shape when key pressed
   - Cannot delete shapes locked by other users

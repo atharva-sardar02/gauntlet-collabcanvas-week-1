@@ -35,3 +35,24 @@ export const INITIAL_STAGE_POSITION = {
   y: -CANVAS_CENTER_Y + (typeof window !== 'undefined' ? (window.innerHeight - 64) / 2 : 0),
 };
 
+// Shape color palette
+export const SHAPE_COLORS = [
+  '#7B68EE', // Medium Slate Blue
+  '#FF6B6B', // Light Red
+  '#4ECDC4', // Turquoise
+  '#45B7D1', // Sky Blue
+  '#FFA07A', // Light Salmon
+  '#98D8C8', // Mint Green
+  '#FFB6C1', // Light Pink
+  '#DDA15E', // Sandy Brown
+  '#BC6C25', // Rust Brown
+];
+
+// Get a random shape color from the palette
+export const getRandomShapeColor = (): string => {
+  return SHAPE_COLORS[Math.floor(Math.random() * SHAPE_COLORS.length)];
+};
+
+// Minimum shape size (prevents accidental tiny shapes)
+export const MIN_SHAPE_SIZE = 10;
+
