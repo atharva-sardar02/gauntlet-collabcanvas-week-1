@@ -7,10 +7,10 @@ interface CanvasControlsProps {
 
 const CanvasControls = ({ onZoomIn, onZoomOut, onResetView, currentZoom }: CanvasControlsProps) => {
   return (
-    <div className="absolute bottom-6 right-6 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+    <div className="absolute bottom-6 right-6 bg-gray-800 rounded-xl shadow-2xl border border-gray-700 overflow-hidden">
       {/* Zoom Level Display */}
-      <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 text-center">
-        <span className="text-sm font-semibold text-gray-700">
+      <div className="px-4 py-2 bg-gray-900 border-b border-gray-700 text-center">
+        <span className="text-sm font-semibold text-blue-400">
           {Math.round(currentZoom * 100)}%
         </span>
       </div>
@@ -20,11 +20,11 @@ const CanvasControls = ({ onZoomIn, onZoomOut, onResetView, currentZoom }: Canva
         {/* Zoom In Button */}
         <button
           onClick={onZoomIn}
-          className="px-4 py-3 hover:bg-blue-50 transition duration-150 border-b border-gray-200 group"
-          title="Zoom In"
+          className="px-4 py-3 hover:bg-gray-700 transition-all duration-200 border-b border-gray-700 group"
+          title="Zoom In (or Mouse Wheel Up)"
         >
           <svg
-            className="w-5 h-5 text-gray-700 group-hover:text-blue-600"
+            className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -41,11 +41,11 @@ const CanvasControls = ({ onZoomIn, onZoomOut, onResetView, currentZoom }: Canva
         {/* Zoom Out Button */}
         <button
           onClick={onZoomOut}
-          className="px-4 py-3 hover:bg-blue-50 transition duration-150 border-b border-gray-200 group"
-          title="Zoom Out"
+          className="px-4 py-3 hover:bg-gray-700 transition-all duration-200 border-b border-gray-700 group"
+          title="Zoom Out (or Mouse Wheel Down)"
         >
           <svg
-            className="w-5 h-5 text-gray-700 group-hover:text-blue-600"
+            className="w-5 h-5 text-gray-400 group-hover:text-blue-400 transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -62,11 +62,11 @@ const CanvasControls = ({ onZoomIn, onZoomOut, onResetView, currentZoom }: Canva
         {/* Reset View Button */}
         <button
           onClick={onResetView}
-          className="px-4 py-3 hover:bg-blue-50 transition duration-150 group"
-          title="Reset View"
+          className="px-4 py-3 hover:bg-gray-700 transition-all duration-200 group"
+          title="Reset View (Center Canvas)"
         >
           <svg
-            className="w-5 h-5 text-gray-700 group-hover:text-blue-600"
+            className="w-5 h-5 text-gray-400 group-hover:text-purple-400 transition-colors"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

@@ -3,6 +3,7 @@ import { Stage, Layer, Rect, Line } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
+import Toolbox from './Toolbox';
 import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
 import PresenceList from '../Collaboration/PresenceList';
@@ -22,6 +23,7 @@ import {
   getViewportDimensions,
   getRandomShapeColor,
 } from '../../utils/constants';
+import type { ToolType } from '../../utils/tools';
 
 const Canvas = () => {
   const context = useContext(CanvasContext);
@@ -36,6 +38,9 @@ const Canvas = () => {
   const [scale, setScale] = useState(DEFAULT_ZOOM);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
+  
+  // Tool selection state
+  const [selectedTool, setSelectedTool] = useState<ToolType>('select');
   
   // Shape drawing state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -70,9 +75,29 @@ const Canvas = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Handle keyboard events for spacebar panning and delete
+  // Update canvas cursor based on selected tool
+  useEffect(() => {
+    if (stageRef.current && !spacePressed && !isPanning) {
+      const cursor = selectedTool === 'rectangle' ? 'crosshair' : 'default';
+      stageRef.current.container().style.cursor = cursor;
+    }
+  }, [selectedTool, spacePressed, isPanning]);
+
+  // Handle keyboard events for tools, spacebar panning, and delete
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Tool shortcuts (V for select, R for rectangle)
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setSelectedTool('select');
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        setSelectedTool('rectangle');
+        return;
+      }
+
       // Delete key functionality
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
         e.preventDefault();
@@ -100,7 +125,7 @@ const Canvas = () => {
         setSpacePressed(false);
         setIsPanning(false);
         if (stageRef.current) {
-          stageRef.current.container().style.cursor = 'default';
+          stageRef.current.container().style.cursor = selectedTool === 'rectangle' ? 'crosshair' : 'default';
         }
       }
     };
@@ -112,7 +137,7 @@ const Canvas = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [spacePressed, selectedId, shapes, deleteShape, isDrawing]);
+  }, [spacePressed, selectedId, shapes, deleteShape, isDrawing, selectedTool]);
 
   // Calculate initial position to center the canvas
   const initialX = -CANVAS_CENTER_X + dimensions.width / 2;
@@ -181,8 +206,8 @@ const Canvas = () => {
       return;
     }
 
-    // Start drawing shape with left click on empty canvas
-    if (e.evt.button === 0 && !spacePressed && e.target === e.target.getStage()) {
+    // Start drawing shape with left click on empty canvas (ONLY if rectangle tool is selected)
+    if (e.evt.button === 0 && !spacePressed && e.target === e.target.getStage() && selectedTool === 'rectangle') {
       const pos = getRelativePointerPosition();
       if (pos) {
         setIsDrawing(true);
@@ -408,7 +433,7 @@ const Canvas = () => {
         <Line
           key={`v-${i}`}
           points={[i, 0, i, CANVAS_HEIGHT]}
-          stroke="#e0e0e0"
+          stroke="#2a2a2a"
           strokeWidth={1}
           listening={false}
         />
@@ -420,7 +445,7 @@ const Canvas = () => {
         <Line
           key={`h-${i}`}
           points={[0, i, CANVAS_WIDTH, i]}
-          stroke="#e0e0e0"
+          stroke="#2a2a2a"
           strokeWidth={1}
           listening={false}
         />
@@ -433,10 +458,10 @@ const Canvas = () => {
   // Show loading state while initial shapes load
   if (loading) {
     return (
-      <div className="relative w-full flex items-center justify-center" style={{ height: dimensions.height }}>
+      <div className="relative w-full flex items-center justify-center bg-gray-900" style={{ height: dimensions.height }}>
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading canvas...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-300 text-lg">Loading canvas...</p>
         </div>
       </div>
     );
@@ -445,8 +470,8 @@ const Canvas = () => {
   // Show error state if there's an error
   if (error) {
     return (
-      <div className="relative w-full flex items-center justify-center" style={{ height: dimensions.height }}>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md">
+      <div className="relative w-full flex items-center justify-center bg-gray-900" style={{ height: dimensions.height }}>
+        <div className="bg-red-900/30 border border-red-700 text-red-400 px-6 py-4 rounded-lg max-w-md">
           <p className="font-semibold mb-2">Error loading canvas</p>
           <p className="text-sm">{error}</p>
         </div>
@@ -455,7 +480,7 @@ const Canvas = () => {
   }
 
   return (
-    <div className="relative w-full" style={{ height: dimensions.height }}>
+    <div className="relative w-full bg-gray-900" style={{ height: dimensions.height }}>
       <Stage
         ref={stageRef}
         width={dimensions.width}
@@ -479,7 +504,7 @@ const Canvas = () => {
             y={0}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            fill="#f5f5f5"
+            fill="#1a1a1a"
             listening={false}
           />
           
@@ -490,7 +515,7 @@ const Canvas = () => {
             y={0}
             width={CANVAS_WIDTH}
             height={CANVAS_HEIGHT}
-            stroke="#cccccc"
+            stroke="#444444"
             strokeWidth={2}
             listening={false}
           />
@@ -527,6 +552,12 @@ const Canvas = () => {
         </Layer>
       </Stage>
 
+      {/* Toolbox */}
+      <Toolbox
+        selectedTool={selectedTool}
+        onSelectTool={setSelectedTool}
+      />
+
       {/* Canvas Controls */}
       <CanvasControls
         onZoomIn={handleZoomIn}
@@ -535,24 +566,21 @@ const Canvas = () => {
         currentZoom={scale}
       />
 
-      {/* Canvas Info Overlay */}
-      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md">
-        <p className="text-sm text-gray-700">
-          <span className="font-semibold">Shapes:</span> {shapes.length}
+      {/* Canvas Info Overlay - Hidden in production, useful for development */}
+      {/* <div className="absolute top-4 left-20 bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-xl border border-gray-700">
+        <p className="text-sm text-gray-300">
+          <span className="font-semibold text-blue-400">Shapes:</span> {shapes.length}
         </p>
-        <p className="text-sm text-gray-700">
-          <span className="font-semibold">Zoom:</span> {Math.round(scale * 100)}%
+        <p className="text-sm text-gray-300">
+          <span className="font-semibold text-blue-400">Zoom:</span> {Math.round(scale * 100)}%
         </p>
-        <p className="text-sm text-gray-700">
-          <span className="font-semibold">Users:</span> {Object.keys(cursors).length + 1}
+        <p className="text-sm text-gray-300">
+          <span className="font-semibold text-blue-400">Users:</span> {Object.keys(cursors).length + 1}
         </p>
-        <p className="text-sm text-gray-500 text-xs mt-1">
-          Click & Drag to create shapes
+        <p className="text-xs text-gray-500 mt-2">
+          Select tool, then draw • Space+Drag to pan
         </p>
-        <p className="text-sm text-gray-500 text-xs">
-          Delete/Backspace to remove
-        </p>
-      </div>
+      </div> */}
 
       {/* Render other users' cursors */}
       {Object.entries(cursors).map(([userId, cursorData]) => {

@@ -27,12 +27,12 @@ const UserPresence = ({ name, color }: UserPresenceProps) => {
       </div>
 
       {/* Name (visible on hover or larger screens) */}
-      <span className="hidden md:inline text-sm font-medium text-gray-700">
+      <span className="hidden md:inline text-sm font-semibold text-gray-100">
         {name}
       </span>
 
       {/* Tooltip for small screens */}
-      <div className="md:hidden absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+      <div className="md:hidden absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-lg">
         {name}
       </div>
     </div>

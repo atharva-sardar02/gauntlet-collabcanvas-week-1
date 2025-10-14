@@ -12,7 +12,7 @@ export const CANVAS_CENTER_X = 2500;
 export const CANVAS_CENTER_Y = 2500;
 
 // Grid spacing for visual grid lines
-export const GRID_SPACING = 1000;
+export const GRID_SPACING = 100;
 
 // Viewport dimensions (will be set dynamically based on window size)
 export const getViewportDimensions = () => {

@@ -82,21 +82,24 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+      <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-8 w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+            <span className="text-white font-bold text-2xl">C</span>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
             Join CollabCanvas
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-400">
             Create your account to start collaborating
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+          <div className="bg-red-900/30 border border-red-700 text-red-400 px-4 py-3 rounded-lg mb-4">
             <p className="text-sm">{error}</p>
           </div>
         )}
@@ -105,7 +108,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Display Name Field */}
           <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="displayName" className="block text-sm font-medium text-gray-300 mb-2">
               Display Name
             </label>
             <input
@@ -115,7 +118,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter your name"
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 disabled:bg-gray-800 disabled:cursor-not-allowed"
               maxLength={20}
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -125,7 +128,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
 
           {/* Email Field */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
               Email Address
             </label>
             <input
@@ -135,13 +138,13 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 disabled:bg-gray-800 disabled:cursor-not-allowed"
             />
           </div>
 
           {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
               Password
             </label>
             <input
@@ -151,7 +154,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               disabled={loading}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200 disabled:bg-gray-800 disabled:cursor-not-allowed"
             />
             <p className="text-xs text-gray-500 mt-1">
               At least 6 characters
@@ -162,7 +165,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:shadow-md"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-blue-500/50 hover:scale-105 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
           >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
@@ -170,16 +173,16 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
 
         {/* Divider */}
         <div className="flex items-center my-6">
-          <div className="flex-1 border-t border-gray-300"></div>
+          <div className="flex-1 border-t border-gray-700"></div>
           <span className="px-4 text-sm text-gray-500">or</span>
-          <div className="flex-1 border-t border-gray-300"></div>
+          <div className="flex-1 border-t border-gray-700"></div>
         </div>
 
         {/* Google Sign In Button */}
         <button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-6 rounded-lg border border-gray-300 transition duration-200 shadow-sm hover:shadow-md disabled:bg-gray-100 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+          className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-6 rounded-lg border border-gray-600 transition-all duration-200 shadow-md hover:shadow-lg disabled:bg-gray-800 disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -204,12 +207,12 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
 
         {/* Switch to Login */}
         <div className="text-center mt-6">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-400">
             Already have an account?{' '}
             <button
               onClick={onSwitchToLogin}
               disabled={loading}
-              className="text-blue-600 hover:text-blue-700 font-semibold hover:underline disabled:text-gray-400"
+              className="text-blue-400 hover:text-blue-300 font-semibold hover:underline disabled:text-gray-600"
             >
               Sign In
             </button>
