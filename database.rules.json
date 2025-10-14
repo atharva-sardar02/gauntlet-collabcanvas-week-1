@@ -2,8 +2,8 @@
   "rules": {
     "sessions": {
       "global-canvas-v1": {
+        ".read": "auth != null",
         "$userId": {
-          ".read": "auth != null",
           ".write": "auth != null && auth.uid == $userId"
         }
       }
