@@ -40,6 +40,9 @@ const Canvas = () => {
   // Shape drawing state
   const [isDrawing, setIsDrawing] = useState(false);
   const [newShape, setNewShape] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  
+  // Force re-render when stage transforms (for cursor positioning)
+  const [, setUpdateTrigger] = useState(0);
 
   // Cursor tracking
   const { cursors, userColor, updateCursorPosition } = useCursors();
@@ -151,6 +154,20 @@ const Canvas = () => {
   };
 
   /**
+   * Convert canvas coordinates to screen coordinates
+   * Used for rendering cursors at the correct screen position
+   */
+  const canvasToScreenCoords = (canvasX: number, canvasY: number) => {
+    const stage = stageRef.current;
+    if (!stage) return { x: 0, y: 0 };
+
+    const transform = stage.getAbsoluteTransform();
+    const screenPos = transform.point({ x: canvasX, y: canvasY });
+
+    return screenPos;
+  };
+
+  /**
    * Handle mouse down - start drawing shape or panning
    */
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -183,20 +200,15 @@ const Canvas = () => {
    * Handle mouse move - update shape preview and cursor position
    */
   const handleMouseMove = () => {
-    // Update cursor position for other users
-    const stage = stageRef.current;
-    if (stage) {
-      const pointerPos = stage.getPointerPosition();
-      if (pointerPos) {
-        // Update cursor position (screen coordinates for other users to see)
-        updateCursorPosition(pointerPos.x, pointerPos.y);
-      }
+    // Update cursor position for other users - use canvas coordinates
+    const pos = getRelativePointerPosition();
+    if (pos) {
+      // Store canvas coordinates (accounts for zoom/pan)
+      updateCursorPosition(pos.x, pos.y);
     }
 
     // Handle shape drawing preview
     if (!isDrawing || !newShape) return;
-
-    const pos = getRelativePointerPosition();
     if (!pos) return;
 
     setNewShape({
@@ -242,6 +254,8 @@ const Canvas = () => {
   const handleDragMove = () => {
     if (stageRef.current) {
       constrainPosition(stageRef.current);
+      // Trigger re-render to update cursor positions
+      setUpdateTrigger(prev => prev + 1);
     }
   };
 
@@ -541,15 +555,20 @@ const Canvas = () => {
       </div>
 
       {/* Render other users' cursors */}
-      {Object.entries(cursors).map(([userId, cursorData]) => (
-        <Cursor
-          key={userId}
-          x={cursorData.cursorX}
-          y={cursorData.cursorY}
-          color={cursorData.cursorColor}
-          name={cursorData.displayName}
-        />
-      ))}
+      {Object.entries(cursors).map(([userId, cursorData]) => {
+        // Convert canvas coordinates to screen coordinates
+        const screenPos = canvasToScreenCoords(cursorData.cursorX, cursorData.cursorY);
+        
+        return (
+          <Cursor
+            key={userId}
+            x={screenPos.x}
+            y={screenPos.y}
+            color={cursorData.cursorColor}
+            name={cursorData.displayName}
+          />
+        );
+      })}
 
       {/* Presence List */}
       <PresenceList 
