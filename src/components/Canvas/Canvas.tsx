@@ -53,7 +53,7 @@ const Canvas = () => {
   // Set the stage ref in context
   useEffect(() => {
     if (stageRef.current) {
-      setStageRef(stageRef);
+      setStageRef(stageRef as React.RefObject<Konva.Stage>);
     }
   }, [setStageRef]);
 
@@ -182,7 +182,7 @@ const Canvas = () => {
   /**
    * Handle mouse move - update shape preview and cursor position
    */
-  const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseMove = () => {
     // Update cursor position for other users
     const stage = stageRef.current;
     if (stage) {

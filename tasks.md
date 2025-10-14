@@ -712,38 +712,38 @@ collabcanvas/
 
 ### Tasks:
 
-- [ ] **9.1: Configure Firebase Hosting**
+- [x] **9.1: Configure Firebase Hosting**
 
   - Files to create: `firebase.json`, `.firebaserc`
   - Run: `firebase init hosting`
   - Set public directory to `dist`
 
-- [ ] **9.2: Update Environment Variables**
+- [x] **9.2: Update Environment Variables**
 
   - Create production Firebase project (or use same)
   - Files to update: `.env.example`
   - Document all required env vars
 
-- [ ] **9.3: Build Production Bundle**
+- [x] **9.3: Build Production Bundle**
 
   - Run: `npm run build`
   - Test production build locally
   - Check bundle size
 
-- [ ] **9.4: Deploy to Firebase Hosting**
+- [x] **9.4: Deploy to Firebase Hosting**
 
   - Run: `firebase deploy --only hosting`
   - Test deployed URL
   - Verify all features work in production
 
-- [ ] **9.5: Set Up Firestore Security Rules**
+- [x] **9.5: Set Up Firestore Security Rules**
 
   - Files to create: `firestore.rules`
   - Allow authenticated users to read/write
   - Validate shape schema
   - Deploy rules: `firebase deploy --only firestore:rules`
 
-- [ ] **9.6: Set Up Realtime Database Rules**
+- [x] **9.6: Set Up Realtime Database Rules**
 
   - Files to create: `database.rules.json`
   - Allow authenticated users read/write

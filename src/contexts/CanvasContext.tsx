@@ -1,4 +1,4 @@
-import { createContext, useState, useRef, ReactNode, useCallback } from 'react';
+import { createContext, useState, type ReactNode, useCallback } from 'react';
 import Konva from 'konva';
 import { useCanvas as useCanvasHook } from '../hooks/useCanvas';
 
