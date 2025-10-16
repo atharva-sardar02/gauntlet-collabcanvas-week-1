@@ -31,6 +31,10 @@ export interface Shape {
   lockedBy?: string | null;
   lockedByColor?: string | null;
   lockedByName?: string;
+  // Conflict resolution metadata
+  version?: number;              // Increments on each edit
+  lastModifiedTimestamp?: number; // Firestore server timestamp (milliseconds)
+  editSessionId?: string;         // Unique ID for current edit session
 }
 
 // Define the Canvas Context interface

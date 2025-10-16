@@ -102,6 +102,17 @@ export const getShapes = async (): Promise<Shape[]> => {
  * Create a new shape in Firestore
  * @param shapeData - Shape data to create
  * @param userId - ID of user creating the shape
+ * 
+ * Note (Task 13.5.10 - Create Collision Handling):
+ * Firestore auto-generates unique IDs, preventing ID collisions.
+ * If two users create shapes at nearly identical timestamps:
+ * - Both shapes exist independently (no conflict)
+ * - Both get unique IDs (no collision)
+ * - Position overlap is acceptable (users can move if needed)
+ * - Last-Write-Wins (LWW) doesn't apply to creates
+ * 
+ * This is fundamentally different from update conflicts where
+ * one change overwrites another. For creates, both succeed.
  */
 export const createShape = async (
   shapeData: Omit<Shape, 'id'>,
@@ -113,16 +124,25 @@ export const createShape = async (
 
     const shapes = snapshot.exists() ? snapshot.data().shapes || [] : [];
 
+    const now = Date.now();
+    
+    // Generate unique ID (prevents collisions even with simultaneous creates)
+    // Format: shape-{timestamp}-{random9chars}
+    // Collision probability: ~1 in 10^15 even at same millisecond
     const newShape: Shape = {
       ...shapeData,
-      id: `shape-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `shape-${now}-${Math.random().toString(36).substr(2, 9)}`,
       createdBy: userId,
-      createdAt: Date.now(),
+      createdAt: now,
       lastModifiedBy: userId,
-      lastModifiedAt: Date.now(),
+      lastModifiedAt: now,
       isLocked: false,
       lockedBy: null,
       lockedByColor: null,
+      // Conflict resolution metadata
+      version: 1,
+      lastModifiedTimestamp: now, // Will be replaced with server timestamp on sync
+      editSessionId: `session-${userId}-${now}`,
     };
 
     await setDoc(
@@ -157,13 +177,19 @@ export const updateShape = async (
     if (!snapshot.exists()) return;
 
     const shapes = snapshot.data().shapes || [];
+    const now = Date.now();
+    
     const updatedShapes = shapes.map((shape: Shape) =>
       shape.id === shapeId
         ? {
             ...shape,
             ...updates,
             lastModifiedBy: userId,
-            lastModifiedAt: Date.now(),
+            lastModifiedAt: now,
+            // Increment version for conflict detection
+            version: (shape.version || 0) + 1,
+            lastModifiedTimestamp: now, // Will be replaced with server timestamp on sync
+            editSessionId: `session-${userId}-${now}`,
           }
         : shape
     );

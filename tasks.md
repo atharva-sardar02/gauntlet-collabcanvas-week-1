@@ -898,6 +898,7 @@ collabcanvas/
 
 ### Infrastructure & Polish:
 - **PR #10**: Core Transforms & Multi-Select
+- **PR #13.5**: Conflict Resolution & Simultaneous Edit Handling
 - **PR #22**: Performance Optimization (500+ objects @ 60 FPS)
 - **PR #23**: Persistence & Reconnection Hardening
 - **PR #24**: Security & Rules Hardening
@@ -1267,6 +1268,277 @@ Client-local history of user-initiated operations + server version tagging; only
 - [ ] Large canvases don't freeze UI
 - [ ] Generated filenames include timestamp
 - [ ] Visual feedback (loading + toast) provided
+
+---
+
+## PR #13.5 — Conflict Resolution & Simultaneous Edit Handling
+
+**Rubric Section**: 1 (Collaborative Infrastructure)  
+**Branch**: `feature/conflict-resolution`  
+**Goal**: Robust handling of simultaneous edits with clear conflict resolution strategy
+
+### Background:
+
+Current implementation uses **server-authoritative updates** with Firestore real-time sync, which provides basic conflict handling through last-write-wins. This PR enhances the system with:
+- Explicit conflict detection
+- Visual feedback for conflicts
+- Optimistic UI updates with rollback
+- Clear documentation of conflict resolution strategy
+
+### Conflict Resolution Strategy:
+
+**Approach: Last-Write-Wins (LWW) with Timestamp + Visual Feedback**
+
+Rationale:
+- Simple and predictable for users
+- Works well with Firestore's real-time sync
+- No complex operational transforms needed
+- Clear visual indicators prevent confusion
+
+### Tasks:
+
+- [ ] **13.5.1: Document Conflict Resolution Strategy**
+  - Files to create: `docs/CONFLICT_RESOLUTION.md`
+  - Document: Last-Write-Wins (LWW) approach
+  - Explain: Firestore timestamp-based conflict resolution
+  - Describe: Visual feedback mechanisms
+  - List: Known edge cases and handling
+
+- [ ] **13.5.2: Add Conflict Detection System**
+  - Files to create: `src/utils/conflictDetection.ts`
+  - Function: `detectConflict(localOp, remoteOp)` - checks for conflicting operations
+  - Function: `shouldResolveConflict(localTimestamp, remoteTimestamp)` - LWW logic
+  - Function: `getConflictType(op1, op2)` - categorizes conflicts (move vs move, delete vs edit, etc.)
+  - Types: Define conflict types (SIMULTANEOUS_MOVE, DELETE_WHILE_EDITING, RAPID_EDIT_STORM, etc.)
+
+- [ ] **13.5.3: Enhance Shape Metadata for Conflict Detection**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Add to Shape interface:
+    - `version: number` - increments on each edit
+    - `lastModifiedTimestamp: number` - Firestore server timestamp
+    - `editSessionId?: string` - unique ID for current edit session
+  - Files to update: `src/services/canvas.ts`
+  - Use Firestore `serverTimestamp()` for all updates
+  - Include version number in all shape updates
+
+- [ ] **13.5.4: Implement Optimistic Updates with Rollback**
+  - Files to create: `src/hooks/useOptimisticUpdates.ts`
+  - Track: Pending local operations (not yet confirmed by server)
+  - Function: `applyOptimistic(operation)` - applies change immediately
+  - Function: `rollbackOptimistic(operation)` - reverts if server rejects
+  - Function: `confirmOptimistic(operation)` - removes from pending on server confirm
+  - Queue: Maintain queue of pending operations with timeouts
+
+- [ ] **13.5.5: Add Visual Conflict Indicators**
+  - Files to create: `src/components/Canvas/ConflictIndicator.tsx`
+  - Red flash animation when local edit is overwritten
+  - Toast notification: "Your change was overwritten by [User Name]"
+  - Temporary highlight on shape showing who made the last edit
+  - Duration: 2 seconds, then fade out
+
+- [ ] **13.5.6: Implement Conflict Logging**
+  - Files to create: `src/utils/conflictLogger.ts`
+  - Log all detected conflicts to console (dev mode)
+  - Track metrics: conflict frequency, types, resolution time
+  - Function: `logConflict(type, users, resolution)` - structured logging
+  - Optional: Send to analytics service
+
+- [ ] **13.5.7: Handle Simultaneous Move Conflicts**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Scenario: Two users drag same shape at same time
+  - Implementation:
+    - User A starts drag → local optimistic update
+    - User B starts drag → local optimistic update
+    - Server receives A's drag first → A wins (LWW)
+    - User B sees shape jump back to A's position + conflict indicator
+  - Add debouncing: 100ms delay before sending drag updates
+
+- [ ] **13.5.8: Handle Rapid Edit Storm Conflicts**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Scenario: Multiple rapid edits (resize, color, move) on same shape
+  - Implementation:
+    - Queue updates locally with timestamps
+    - Send batched updates every 100ms
+    - On conflict: show "Shape being edited by multiple users" warning
+    - Last edit wins (most recent server timestamp)
+
+- [ ] **13.5.9: Handle Delete vs Edit Conflicts**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Scenario: User A deletes shape while User B is editing it
+  - Implementation:
+    - User B's edit arrives after delete → shape stays deleted
+    - Show toast to User B: "Shape was deleted by [User A]"
+    - Offer "Undo delete" button (creates new shape with User B's edits)
+  - Add confirmation: "This shape is being edited by [User B], delete anyway?"
+
+- [ ] **13.5.10: Handle Create Collision Conflicts**
+  - Files to update: `src/services/canvas.ts`
+  - Scenario: Two users create shapes at nearly identical timestamps
+  - Implementation:
+    - Firestore auto-generates unique IDs → no ID collision
+    - If positions overlap: no conflict (both shapes exist)
+    - No special handling needed (LWW doesn't apply to creates)
+
+- [ ] **13.5.11: Add Conflict Resolution UI**
+  - Files to create: `src/components/UI/ConflictResolutionPanel.tsx`
+  - Show when conflict detected (optional modal/panel)
+  - Display: "Your edit conflicted with [User Name]"
+  - Options:
+    - "Keep their changes" (default, already applied)
+    - "Revert to my version" (re-apply local change)
+  - Auto-dismiss after 5 seconds if no action
+
+- [ ] **13.5.12: Add Rate Limiting for Rapid Edits**
+  - Files to create: `src/utils/rateLimiter.ts`
+  - Limit: Max 10 updates/second per shape
+  - Implementation: Debounce + throttle combo
+  - Function: `rateLimitUpdate(shapeId, operation)` - queues if over limit
+  - Prevents: Firestore quota exhaustion and state corruption
+
+- [ ] **13.5.13: Add Conflict Detection Tests**
+  - Files to create: `tests/integration/conflict-resolution.test.ts`
+  - Test: Simultaneous move (two users drag same shape)
+  - Test: Rapid edit storm (resize + color + move simultaneously)
+  - Test: Delete vs edit (delete during active edit)
+  - Test: Create collision (two creates at same timestamp)
+  - Test: Optimistic update rollback
+  - Mock: Firestore responses with controlled timing
+
+### Conflict Resolution Flow:
+
+```mermaid
+sequenceDiagram
+    participant UserA
+    participant LocalA
+    participant Firestore
+    participant LocalB
+    participant UserB
+
+    UserA->>LocalA: Drag shape to (100, 100)
+    LocalA->>LocalA: Apply optimistically
+    LocalA->>Firestore: Update with timestamp T1
+
+    UserB->>LocalB: Drag same shape to (200, 200)
+    LocalB->>LocalB: Apply optimistically
+    LocalB->>Firestore: Update with timestamp T2
+
+    Firestore->>LocalA: Confirm T1
+    LocalA->>LocalA: Mark as confirmed
+
+    Firestore->>LocalB: Receive update T1 (100, 100)
+    LocalB->>LocalB: Detect conflict (local T2 vs remote T1)
+    LocalB->>LocalB: Compare timestamps (T2 > T1)
+    
+    Firestore->>LocalA: Receive update T2 (200, 200)
+    LocalA->>LocalA: Detect conflict (local confirmed vs remote T2)
+    LocalA->>LocalA: Compare timestamps (T2 > T1)
+    LocalA->>LocalA: Apply T2 (last-write-wins)
+    LocalA->>UserA: Show conflict indicator
+
+    Firestore->>LocalB: Confirm T2
+    LocalB->>LocalB: T2 wins (most recent)
+    LocalB->>UserB: No conflict shown (they won)
+```
+
+### Testing Scenarios:
+
+#### Scenario 1: Simultaneous Move
+```
+Setup:
+- User A and User B both have shape selected
+- Shape at position (100, 100)
+
+Actions:
+1. User A drags shape to (200, 100) at T1
+2. User B drags shape to (100, 200) at T2 (20ms later)
+
+Expected Result:
+- Shape ends at (100, 200) (T2 is more recent)
+- User A sees red flash + toast: "Your move was overwritten by User B"
+- User B sees no conflict (their edit won)
+- No ghost shapes or duplicates
+```
+
+#### Scenario 2: Rapid Edit Storm
+```
+Setup:
+- User A, B, C all editing same shape
+- Shape: 100x100 rectangle at (50, 50), color blue
+
+Actions (within 500ms):
+1. User A: Resize to 200x100 at T1
+2. User B: Change color to red at T2 (50ms later)
+3. User C: Move to (150, 50) at T3 (100ms later)
+4. User A: Resize to 250x100 at T4 (150ms later)
+
+Expected Result:
+- Final state: 250x100, red, at (150, 50)
+- Each property resolved independently (LWW per field)
+- Users see temporary inconsistencies (< 200ms)
+- All users converge to same final state
+- No corruption of width/height/color/position
+```
+
+#### Scenario 3: Delete vs Edit
+```
+Setup:
+- User A selecting shape
+- User B actively editing same shape (dragging)
+
+Actions:
+1. User B starts dragging at T1
+2. User A presses Delete at T2
+3. User B releases drag at T3 (after delete)
+
+Expected Result:
+- Shape is deleted (delete at T2 wins)
+- User B sees toast: "Shape was deleted by User A"
+- User B's drag update arrives but shape already deleted (no-op)
+- Optional: "Undo delete" button for User B
+- No ghost shape created
+```
+
+#### Scenario 4: Create Collision
+```
+Setup:
+- User A and User B both in draw mode
+- Both drawing rectangles at similar positions
+
+Actions:
+1. User A creates rect at (100, 100) at T1
+2. User B creates rect at (105, 105) at T2 (10ms later)
+
+Expected Result:
+- Both rectangles exist (no collision, different IDs)
+- Shapes may overlap visually (expected, no conflict)
+- User A sees their shape + User B's shape
+- User B sees both shapes
+- No duplicate or merged shapes
+```
+
+### Performance Targets:
+
+- **Conflict Detection Latency:** < 50ms
+- **Visual Feedback Delay:** < 100ms after conflict
+- **Optimistic Update:** Instant (0ms perceived latency)
+- **Rollback Time:** < 100ms
+- **Max Operations Queued:** 50 per user
+- **Rate Limit:** 10 updates/second per shape
+
+### PR Checklist:
+
+- [ ] Two users edit same object simultaneously → both see consistent final state
+- [ ] Documented strategy (LWW with visual feedback)
+- [ ] No "ghost" objects or duplicates
+- [ ] Rapid edits (10+ changes/sec) don't corrupt state
+- [ ] Clear visual feedback on who last edited
+- [ ] All 4 testing scenarios pass
+- [ ] Conflict indicators show for 2 seconds
+- [ ] Toast notifications explain conflicts clearly
+- [ ] Optimistic updates feel instant (< 50ms)
+- [ ] Rollback is smooth (no jarring jumps)
+- [ ] Rate limiting prevents quota exhaustion
+- [ ] Conflict logs captured (dev mode)
 
 ---
 
