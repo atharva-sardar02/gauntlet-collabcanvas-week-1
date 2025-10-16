@@ -1,9 +1,26 @@
-# CollabCanvas MVP - Product Requirements Document
+# CollabCanvas - Product Requirements Document
 
 **Project**: CollabCanvas - Real-Time Collaborative Design Tool  
-**Goal**: Build a solid multiplayer foundation with basic canvas functionality
+**Owner**: Atharva Sardar  
+**Last Updated**: October 15, 2025  
+**Repository**: Firebase Hosting (Auth/Firestore/RTDB)
 
-**Note**: AI features are intentionally not part of this MVP and will be addressed in future phases.
+---
+
+## Document Structure
+
+This PRD contains two phases:
+1. **[Phase 1: MVP](#phase-1-mvp)** - Foundational multiplayer canvas (✅ Completed)
+2. **[Phase 2: Production](#phase-2-production-features)** - Advanced features + AI agent (🟡 In Progress)
+
+---
+---
+
+# Phase 1: MVP
+
+**Status**: ✅ Completed  
+**Goal**: Build a solid multiplayer foundation with basic canvas functionality  
+**Note**: AI features are intentionally not part of MVP and are addressed in Phase 2
 
 ---
 
@@ -589,3 +606,226 @@
 
 **Fourth Risk:** Cursor updates causing performance issues  
 **Mitigation:** Use Firebase Realtime Database (not Firestore) for cursor positions; throttle updates to 25 FPS (40ms intervals) with smooth interpolation
+
+---
+---
+
+# Phase 2: Production Features
+
+**Status**: 🟡 In Progress  
+**Owner**: Atharva Sardar  
+**Last Updated**: October 15, 2025
+
+---
+
+## 1) Purpose & Scope
+
+Evolve the MVP into a production-ready real‑time collaborative canvas with an **AI Canvas Agent** (text-based command bar backed by OpenAI) and a focused set of Figma‑inspired features that map directly to the final rubric. We keep the **Firebase** backend (Auth, Firestore, Realtime DB, Hosting) and add secure serverless integration for the AI agent.
+
+### In‑Scope (production)
+- **Collaboration**: sub‑100ms shape sync, sub‑50ms cursor sync; locking + documented conflict policy
+- **Canvas features**: rectangles (existing) plus transforms; multi-select; **Tier 1 + Tier 2 + Tier 3** features chosen below
+- **AI Canvas Agent** (text command bar): external **OpenAI API** with function calling; shared, deterministic state updates
+- **Persistence & reconnection**: resilient offline, reconnect, and state recovery
+- **Deployment & security**: production Firebase rules, secrets handling for OpenAI keys
+
+### Out‑of‑Scope (for this phase)
+- New backend (Socket.io/custom) migration
+- Mobile-specific layout and gestures
+- Plugin marketplace / extensibility API beyond internal "tools"
+
+---
+
+## 2) User Types & Core User Stories
+
+### Roles
+- **Designer/Creator** (primary) — creates and edits designs
+- **Collaborator/Reviewer** — co-edits and leaves comments/annotations
+- **Observer** — read‑only participant for demos
+
+### High‑priority User Stories
+1. As a designer, I can **undo/redo** edits with keyboard shortcuts so I can safely explore ideas.  
+2. As a designer, I can **export the canvas or selected objects as PNG** for sharing.  
+3. As a designer, I can use **keyboard shortcuts**: Delete, **Duplicate**, and Arrow keys to nudge objects.  
+4. As a designer, I can **align** selected objects (left, right, center, top, middle, bottom) and **distribute** them evenly.  
+5. As a designer, I can define **components** (reusable symbols) and **instantiate** them across the canvas.  
+6. As a collaborator, I can leave **comments/annotations** pinned to objects and reply/resolve threads.  
+7. As any user, I see **other cursors**, presence, and edits in real‑time with clear lock indicators.  
+8. As any user, I can issue **natural‑language commands** (e.g., “Create a 200×300 rectangle centered, then align selected left”) and see consistent shared results.  
+
+(Stories retain all MVP behaviors: auth, pan/zoom, shape create/move, locking, presence, persistence.)
+
+---
+
+## 3) Requirements Traceability to Rubric
+
+**Section 1: Collaborative Infrastructure**
+- **Real‑time sync targets**: <100ms objects, <50ms cursors; jitter‑free under rapid edits.
+- **Conflict resolution**: server‑authoritative Firestore updates; **first‑writer lock** for movement; **last‑write‑wins** for non‑locked property updates; documented semantics.
+- **Persistence & reconnection**: offline cache, queued ops, reconnect reconciliation, connection status UI.
+
+**Section 2: Canvas & Performance**
+- **Transforms**: move/resize/rotate; **multi‑select** (shift‑click / marquee).  
+- **Performance**: 60 FPS with 500+ objects and 5+ users; graceful degradation beyond.
+
+**Section 3: Advanced Features (choices)**
+- **Tier 1 (choose 3):** Undo/Redo; Export PNG (canvas/selection); Keyboard shortcuts (Delete, Duplicate, Arrow nudge).  
+- **Tier 2 (choose 2):** Alignment tools; Components system (create, edit master, instance sync).  
+- **Tier 3 (choose 1):** Collaborative comments/annotations with resolve state.
+
+**Section 4: AI Canvas Agent**
+- **Interface**: in‑app **command bar** with history.  
+- **Model**: **OpenAI (function calling)**; serverless callable endpoint mediates tool execution.  
+- **Breadth**: at least **8 command types** spanning creation, manipulation, layout, and one complex.  
+- **Latency**: <2s simple; multi‑step plans stream progress (UI toasts).  
+- **Shared state**: all AI actions write through the same server‑authoritative pipeline.
+
+**Section 5–6: Technical & Docs**
+- Modular React + contexts/hooks/services; typed APIs; exhaustive error handling and retry.  
+- README: setup, env vars, architecture, security notes; demo link.  
+- Deployment: Firebase Hosting + Rules; 5+ concurrent users validated.
+
+---
+
+## 4) Architecture Overview
+
+### Frontend
+- **React + Konva + Tailwind**  
+- Contexts/hooks for Auth, Canvas, Presence, Cursors, Comments, AI Agent
+- Command Bar (Ctrl+/) → parse → send to AI endpoint → receive structured tool calls → execute
+
+### Backend & Data
+- **Auth**: Firebase Auth (Email/Password, Google).  
+- **Canvas**: Firestore `canvases/{canvasId}` with `shapes[]`, metadata, and version.  
+- **Presence/Cursors**: RTDB `/sessions/{canvasId}/{userId}`.  
+- **Comments**: Firestore subcollection `canvases/{canvasId}/comments/{commentId}` with target `shapeId`, thread items, status.  
+- **Components**: Firestore `components/{componentId}` and instance references on shapes.  
+- **AI endpoint**: Firebase Cloud Functions (Callable HTTPS) proxies to OpenAI; enforces auth, rate limits, schema validation, and idempotency tokens.
+
+### AI Tool Schema (examples)
+- `createShape({ type, x, y, width, height, fill })`
+- `moveShape({ id, x, y })`, `resizeShape({ id, width, height })`, `rotateShape({ id, degrees })`
+- `align({ ids, mode })`, `distribute({ ids, axis, spacing? })`
+- `createText({ text, x, y, fontSize })`
+- `makeComponent({ selectionIds, name })`, `instantiateComponent({ componentId, x, y })`
+- `export({ scope: "selection"|"canvas", format: "png" })`
+
+**Authority & Conflicts**
+- All tool calls **persist via Firestore**; clients subscribe and render.  
+- **Locks** for drag/transform; **last‑write‑wins** on unlocked scalar props.  
+- **Idempotency**: `requestId` to dedupe retries (client and function).
+
+---
+
+## 5) Data Models (high‑level)
+
+### `canvases/{canvasId}` (Firestore)
+```json
+{
+  "canvasId": "global-canvas-v2",
+  "shapes": [
+    {
+      "id": "uuid",
+      "type": "rect|circle|text|componentInstance",
+      "x": 0, "y": 0, "width": 0, "height": 0,
+      "rotation": 0,
+      "fill": "#4ECDC4",
+      "text": null,
+      "componentId": null,
+      "lockedBy": null, "lockedAt": null,
+      "createdBy": "uid", "createdAt": 0,
+      "updatedBy": "uid", "updatedAt": 0
+    }
+  ],
+  "version": 2,
+  "lastUpdated": 0
+}
+```
+
+### `components/{componentId}` (Firestore)
+```json
+{
+  "id": "componentId",
+  "name": "Button/Primary",
+  "definition": { "shapes": [/* master nodes */] },
+  "createdBy": "uid",
+  "createdAt": 0,
+  "updatedAt": 0
+}
+```
+
+### `canvases/{canvasId}/comments/{commentId}` (Firestore)
+```json
+{
+  "id": "commentId",
+  "shapeId": "uuid",
+  "authorId": "uid",
+  "text": "Align this with the header",
+  "status": "open|resolved",
+  "createdAt": 0,
+  "updatedAt": 0,
+  "replies": [ { "authorId": "uid", "text": "...", "createdAt": 0 } ]
+}
+```
+
+### RTDB `/sessions/{canvasId}/{userId}`
+```json
+{ "displayName": "Atharva", "cursorColor": "#33C1FF", "cursorX": 0, "cursorY": 0, "lastSeen": 0 }
+```
+
+---
+
+## 6) Security, Privacy, and Secrets
+
+- OpenAI API key **never** in client; stored as Firebase Functions secret / env var.  
+- Auth checks on all writes; Firestore/RTDB rules validate shape schema and ownership.  
+- Rate‑limit AI endpoint per user; verify prompt → tool schema translation server‑side.  
+- Idempotent mutations; structured logging and redaction for prompts/results.
+
+---
+
+## 7) Performance & Reliability Targets
+
+- **60 FPS** interactions at 500+ objects, **5+ users**.  
+- **<100ms** shape sync, **<50ms** cursor sync; throttled cursor updates (25 FPS) with interpolation.  
+- Offline support; queued ops with retry; connection status indicator.
+
+---
+
+## 8) Testing & Validation
+
+- Unit tests for helpers/services; integration tests for auth flow, canvas sync, locking, comments, AI command execution.  
+- Test scenarios: simultaneous drag, delete‑vs‑edit, create collisions, reconnect, network drop, export correctness.  
+- Manual matrix: Chrome/Firefox/Safari, desktop resolutions.
+
+---
+
+## 9) Risks & Mitigations
+
+- **CRDT/OT complexity** → keep server‑authoritative + locks now; evaluate CRDT later.  
+- **AI mis‑parsing** → strict tool schemas + confirm steps UI for complex commands.  
+- **Cost/latency** → cache small results, batch tool calls, stream progress, fallbacks.
+
+---
+
+## 10) Milestones
+
+**Reference**: See [tasks.md](./tasks.md) for detailed PR breakdown
+
+- **PR #10-12**: Infrastructure & transforms hardening  
+- **PR #13**: Export PNG (Tier-1)
+- **PR #14**: Alignment tools (Tier-2)
+- **PR #15-17**: Components system (Tier-2)
+- **PR #18**: Comments/annotations (Tier-3)
+- **PR #11-12**: Keyboard shortcuts + Undo/Redo (Tier-1)
+- **PR #19-21**: AI agent (backend, UI, complex commands)
+- **PR #22-27**: Performance, security, testing, docs, demo prep
+
+---
+
+## 11) Acceptance Criteria
+
+- Rubric Section 1–2 targets met in production deploy.  
+- **Tier 1: 3 features**, **Tier 2: 2 features**, **Tier 3: 1 feature** fully implemented and tested.  
+- **AI agent**: ≥8 commands across categories; complex layout command demonstrated.  
+- Demo video shows 2+ users, AI commands, and architecture overview.
