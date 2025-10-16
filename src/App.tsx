@@ -5,23 +5,36 @@ import Signup from './components/Auth/Signup';
 import Navbar from './components/Layout/Navbar';
 import Canvas from './components/Canvas/Canvas';
 import { CanvasProvider } from './contexts/CanvasContext';
+import { HistoryProvider } from './contexts/HistoryContext';
 import { useAuth } from './hooks/useAuth';
 import './App.css';
 
 /**
  * Main authenticated app view
- * Contains the Canvas component wrapped in CanvasProvider
+ * Contains the Canvas component wrapped in CanvasProvider and HistoryProvider
  */
 const AuthenticatedApp = () => {
+  const { currentUser } = useAuth();
+  const [exportHandler, setExportHandler] = useState<(() => void) | null>(null);
+  const [hasShapes, setHasShapes] = useState(false);
+
+  // Callback to receive export handler from Canvas
+  const handleExportRequest = (handler: () => void, hasShapesValue: boolean) => {
+    setExportHandler(() => handler);
+    setHasShapes(hasShapesValue);
+  };
+
   return (
-    <CanvasProvider>
-      <div className="min-h-screen bg-gray-900 flex flex-col">
-        <Navbar />
-        <div className="flex-1 overflow-hidden">
-          <Canvas />
+    <HistoryProvider userId={currentUser?.uid || null}>
+      <CanvasProvider>
+        <div className="min-h-screen bg-gray-900 flex flex-col">
+          <Navbar onExport={exportHandler || undefined} hasShapes={hasShapes} />
+          <div className="flex-1 overflow-hidden">
+            <Canvas onExportRequest={handleExportRequest} />
+          </div>
         </div>
-      </div>
-    </CanvasProvider>
+      </CanvasProvider>
+    </HistoryProvider>
   );
 };
 

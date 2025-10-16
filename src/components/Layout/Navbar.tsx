@@ -1,6 +1,11 @@
 import { useAuth } from '../../hooks/useAuth';
 
-const Navbar = () => {
+interface NavbarProps {
+  onExport?: () => void;
+  hasShapes?: boolean;
+}
+
+const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
   const { currentUser, logout } = useAuth();
 
   const handleLogout = async () => {
@@ -25,9 +30,34 @@ const Navbar = () => {
             </h1>
           </div>
 
-          {/* User Info & Logout */}
+          {/* User Info & Actions */}
           {currentUser && (
             <div className="flex items-center gap-4">
+              {/* Export Button */}
+              {onExport && (
+                <button
+                  onClick={onExport}
+                  disabled={!hasShapes}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-green-500/50 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+                  title={hasShapes ? "Export Canvas (Ctrl/Cmd+E)" : "No shapes to export"}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Export</span>
+                </button>
+              )}
+
               {/* User Display Name */}
               <div className="flex items-center gap-3">
                 <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-semibold shadow-lg">

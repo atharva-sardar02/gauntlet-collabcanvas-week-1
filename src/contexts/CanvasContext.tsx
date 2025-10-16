@@ -1,17 +1,28 @@
-import { createContext, useState, type ReactNode, useCallback } from 'react';
+import { createContext, useState, type ReactNode, useCallback, useRef } from 'react';
 import Konva from 'konva';
 import { useCanvas as useCanvasHook } from '../hooks/useCanvas';
+import { useAuth } from '../hooks/useAuth';
 import { DUPLICATE_OFFSET, CANVAS_WIDTH, CANVAS_HEIGHT } from '../utils/constants';
+import type { Operation } from '../types/operations';
 
 // Define the shape interface
 export interface Shape {
   id: string;
-  type: 'rectangle';
+  type: 'rectangle' | 'circle' | 'triangle' | 'text';
   x: number;
   y: number;
   width: number;
   height: number;
   fill: string;
+  // Text-specific properties
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontStyle?: string; // 'normal' | 'italic' | 'bold' | 'bold italic'
+  textDecoration?: string; // 'underline' | ''
+  // Circle-specific (uses width as diameter)
+  radius?: number;
+  // Metadata
   createdBy?: string;
   createdAt?: number;
   lastModifiedBy?: string;
@@ -29,15 +40,17 @@ export interface CanvasContextType {
   stageRef: React.RefObject<Konva.Stage> | null;
   loading: boolean;
   error: string | null;
-  addShape: (shape: Omit<Shape, 'id'>) => Promise<void>;
-  updateShape: (id: string, updates: Partial<Shape>) => Promise<void>;
-  deleteShape: (id: string) => Promise<void>;
+  addShape: (shape: Omit<Shape, 'id'>, skipHistory?: boolean) => Promise<void>;
+  updateShape: (id: string, updates: Partial<Shape>, skipHistory?: boolean) => Promise<void>;
+  deleteShape: (id: string, skipHistory?: boolean) => Promise<void>;
   selectShape: (id: string | null) => void;
   setStageRef: (ref: React.RefObject<Konva.Stage>) => void;
   lockShape: (id: string, userColor: string) => Promise<void>;
   unlockShape: (id: string) => Promise<void>;
-  duplicateShape: (id: string) => Promise<string | null>;
-  nudgeShape: (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number) => Promise<void>;
+  duplicateShape: (id: string, skipHistory?: boolean) => Promise<string | null>;
+  nudgeShape: (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number, skipHistory?: boolean) => Promise<void>;
+  setOperationCallback: (callback: ((operation: Operation) => void) | null) => void;
+  recreateShape: (shape: Shape) => Promise<void>;
 }
 
 // Create the context
@@ -55,6 +68,10 @@ interface CanvasProviderProps {
 export const CanvasProvider = ({ children }: CanvasProviderProps) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [stageRef, setStageRefState] = useState<React.RefObject<Konva.Stage> | null>(null);
+  const operationCallbackRef = useRef<((operation: Operation) => void) | null>(null);
+  
+  // Get current user for tracking operations
+  const { currentUser } = useAuth();
 
   // Use the canvas hook for real-time sync
   const {
@@ -73,8 +90,12 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    * Server-authoritative: waits for Firebase confirmation
    */
   const addShape = useCallback(
-    async (shape: Omit<Shape, 'id'>) => {
+    async (shape: Omit<Shape, 'id'>, skipHistory = false) => {
       await addShapeToFirebase(shape);
+      
+      // Track operation for undo/redo (will be called after shape is created)
+      // Note: For create operations, we track them via the shapes subscription
+      // since we need the actual Firebase-generated ID
     },
     [addShapeToFirebase]
   );
@@ -84,10 +105,25 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    * Server-authoritative: waits for Firebase confirmation
    */
   const updateShape = useCallback(
-    async (id: string, updates: Partial<Shape>) => {
+    async (id: string, updates: Partial<Shape>, skipHistory = false) => {
+      const beforeShape = shapes.find(s => s.id === id);
       await updateShapeInFirebase(id, updates);
+      
+      // Track operation for history
+      if (!skipHistory && operationCallbackRef.current && beforeShape && currentUser) {
+        const afterShape = { ...beforeShape, ...updates };
+        operationCallbackRef.current({
+          id: `op-${Date.now()}`,
+          type: 'update',
+          userId: currentUser.uid,
+          timestamp: Date.now(),
+          before: { shapeData: beforeShape },
+          after: { shapeData: afterShape },
+          shapeIds: [id],
+        });
+      }
     },
-    [updateShapeInFirebase]
+    [updateShapeInFirebase, shapes, currentUser]
   );
 
   /**
@@ -95,13 +131,27 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    * Server-authoritative: waits for Firebase confirmation
    */
   const deleteShape = useCallback(
-    async (id: string) => {
+    async (id: string, skipHistory = false) => {
+      const beforeShape = shapes.find(s => s.id === id);
       await deleteShapeFromFirebase(id);
       if (selectedId === id) {
         setSelectedId(null);
       }
+      
+      // Track operation for history
+      if (!skipHistory && operationCallbackRef.current && beforeShape && currentUser) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}`,
+          type: 'delete',
+          userId: currentUser.uid,
+          timestamp: Date.now(),
+          before: { shapeData: beforeShape },
+          after: {},
+          shapeIds: [id],
+        });
+      }
     },
-    [deleteShapeFromFirebase, selectedId]
+    [deleteShapeFromFirebase, selectedId, shapes, currentUser]
   );
 
   /**
@@ -145,7 +195,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    * @returns ID of the new duplicated shape, or null if not found
    */
   const duplicateShape = useCallback(
-    async (id: string): Promise<string | null> => {
+    async (id: string, skipHistory = false): Promise<string | null> => {
       const shape = shapes.find(s => s.id === id);
       if (!shape) return null;
 
@@ -162,11 +212,24 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
 
       await addShapeToFirebase(duplicatedShape);
       
+      // Track operation for history
+      if (!skipHistory && operationCallbackRef.current && currentUser) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}`,
+          type: 'duplicate',
+          userId: currentUser.uid,
+          timestamp: Date.now(),
+          before: { shapeData: shape },
+          after: { shapeData: duplicatedShape as Shape },
+          shapeIds: [id],
+        });
+      }
+      
       // Return a generated ID (in practice, this would come from Firebase)
       // For now, we'll return a placeholder that the caller can use
       return `shape-${Date.now()}-duplicated`;
     },
-    [shapes, addShapeToFirebase]
+    [shapes, addShapeToFirebase, currentUser]
   );
 
   /**
@@ -176,7 +239,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    * @param amount - Amount to nudge in pixels
    */
   const nudgeShape = useCallback(
-    async (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number) => {
+    async (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number, skipHistory = false) => {
       const shape = shapes.find(s => s.id === id);
       if (!shape) return;
 
@@ -198,8 +261,33 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
       }
 
       await updateShapeInFirebase(id, updates);
+      
+      // Track operation for history
+      if (!skipHistory && operationCallbackRef.current && currentUser) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}`,
+          type: 'move',
+          userId: currentUser.uid,
+          timestamp: Date.now(),
+          before: { shapeData: shape },
+          after: { shapeData: { ...shape, ...updates } },
+          shapeIds: [id],
+        });
+      }
     },
-    [shapes, updateShapeInFirebase]
+    [shapes, updateShapeInFirebase, currentUser]
+  );
+
+  /**
+   * Recreate a shape (for undo of delete operations)
+   * @param shape - Complete shape data to recreate
+   */
+  const recreateShape = useCallback(
+    async (shape: Shape) => {
+      // Use the canvas service to recreate the shape with its original ID
+      await addShapeToFirebase(shape);
+    },
+    [addShapeToFirebase]
   );
 
   const value: CanvasContextType = {
@@ -217,6 +305,10 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     unlockShape,
     duplicateShape,
     nudgeShape,
+    setOperationCallback: useCallback((callback) => {
+      operationCallbackRef.current = callback;
+    }, []),
+    recreateShape,
   };
 
   return (

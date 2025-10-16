@@ -1,3 +1,4 @@
+import { TOOLS } from '../../utils/tools';
 import type { ToolType } from '../../utils/tools';
 
 interface ToolboxProps {
@@ -6,20 +7,7 @@ interface ToolboxProps {
 }
 
 const Toolbox = ({ selectedTool, onSelectTool }: ToolboxProps) => {
-  const tools: Array<{ id: ToolType; name: string; icon: string; description: string }> = [
-    { 
-      id: 'select', 
-      name: 'Select', 
-      icon: '🖱️',
-      description: 'Select and move shapes'
-    },
-    { 
-      id: 'rectangle', 
-      name: 'Rectangle', 
-      icon: '▭',
-      description: 'Draw rectangles'
-    },
-  ];
+  const tools = TOOLS;
 
   return (
     <div className="fixed left-4 top-20 bg-gray-800 rounded-xl shadow-2xl p-3 border border-gray-700 z-30">
@@ -57,14 +45,14 @@ const Toolbox = ({ selectedTool, onSelectTool }: ToolboxProps) => {
       {/* Keyboard shortcuts hint */}
       <div className="mt-4 pt-3 border-t border-gray-700">
         <div className="text-gray-500 text-[10px] px-2 space-y-1">
-          <div className="flex items-center gap-2">
-            <kbd className="bg-gray-900 px-1.5 py-0.5 rounded text-[9px]">V</kbd>
-            <span>Select</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <kbd className="bg-gray-900 px-1.5 py-0.5 rounded text-[9px]">R</kbd>
-            <span>Rectangle</span>
-          </div>
+          {tools.map((tool) => tool.shortcut && (
+            <div key={tool.id} className="flex items-center gap-2">
+              <kbd className="bg-gray-900 px-1.5 py-0.5 rounded text-[9px] font-semibold">
+                {tool.shortcut}
+              </kbd>
+              <span>{tool.name}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

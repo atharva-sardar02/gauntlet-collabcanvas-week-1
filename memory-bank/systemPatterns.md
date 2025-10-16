@@ -26,6 +26,16 @@ Keyboard Shortcuts Pattern
 - Ignores shortcuts when typing in input fields
 - All shortcuts work only when canvas is focused
 
+Undo/Redo Pattern
+- `HistoryContext`: Manages undo/redo stacks with user-scoped operations
+- `Operation` types: Track before/after state for all canvas operations
+- `HistoryManager` component: Connects history with canvas operations
+- User-scoped: Only undoes/redoes current user's operations
+- Conflict detection: Warns if shape modified by another user
+- Persistence: localStorage saves up to 50 recent operations
+- Callback pattern: Canvas operations notify history system via callback
+- Supported operations: create, delete, move, update, duplicate, transform
+
 Data model (initial)
 - Users: minimal profile for presence display.
 - Presence: ephemeral, user online state and cursor position.

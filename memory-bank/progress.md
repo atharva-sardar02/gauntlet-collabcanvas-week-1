@@ -13,9 +13,16 @@ What works
   - Escape to clear selection
   - V for select tool, R for rectangle tool
   - Toast notifications for all actions
+- **Undo/Redo system (PR #12 - COMPLETED)**:
+  - Ctrl/Cmd+Z to undo last operation
+  - Ctrl/Cmd+Shift+Z to redo last undone operation
+  - User-scoped operations (only undo own actions)
+  - Supports: create, delete, move, update operations
+  - localStorage persistence (up to 50 operations)
+  - Visual buttons with tooltips showing operation descriptions
+  - Cross-user conflict detection
 
 What's left to build
-- Undo/Redo system (PR #12)
 - Export PNG functionality (PR #13)
 - Alignment tools (PR #14)
 - Components system with master/instances (PR #15-17)
@@ -27,8 +34,9 @@ What's left to build
 
 Current status
 - Phase 1 (MVP) completed ✅
-- Phase 2 (Production) in progress - PR #11 completed
+- Phase 2 (Production) in progress - PR #11 & #12 completed ✅
 - Keyboard shortcuts fully functional with visual feedback
+- Undo/Redo system operational with user-scoped operations
 
 Known issues
 - None recorded yet

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext, useCallback } from 'react';
-import { Stage, Layer, Rect, Line } from 'react-konva';
+import { Stage, Layer, Rect, Line, Circle, Text } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
@@ -8,6 +8,12 @@ import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
 import PresenceList from '../Collaboration/PresenceList';
 import ShortcutToast, { type ToastMessage } from '../UI/ShortcutToast';
+import HistoryButtons from './HistoryButtons';
+import HistoryManager from './HistoryManager';
+import TextEditor from './TextEditor';
+import ExportDialog, { type ExportScope, type PixelRatio } from './ExportDialog';
+import ExportToast, { type ExportToastMessage } from '../UI/ExportToast';
+import { exportCanvas, exportSelection, downloadDataURL, generateFilename, getDataURLSize } from '../../services/export';
 import { useCursors } from '../../hooks/useCursors';
 import { usePresence } from '../../hooks/usePresence';
 import { useAuth } from '../../hooks/useAuth';
@@ -29,7 +35,11 @@ import {
 } from '../../utils/constants';
 import type { ToolType } from '../../utils/tools';
 
-const Canvas = () => {
+interface CanvasProps {
+  onExportRequest?: (handler: () => void, hasShapes: boolean) => void;
+}
+
+const Canvas = ({ onExportRequest }: CanvasProps) => {
   const context = useContext(CanvasContext);
   
   if (!context) {
@@ -52,6 +62,14 @@ const Canvas = () => {
   
   // Toast notification state
   const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
+  
+  // Text editor state
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  
+  // Export dialog state
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportToastMessage, setExportToastMessage] = useState<ExportToastMessage | null>(null);
   
   // Force re-render when stage transforms (for cursor positioning)
   const [, setUpdateTrigger] = useState(0);
@@ -157,6 +175,116 @@ const Canvas = () => {
     }
   }, [selectedId, shapes, nudgeShape]);
 
+  /**
+   * Handle undo shortcut
+   */
+  const handleUndo = useCallback(async () => {
+    const historyManager = (window as any).__historyManager;
+    if (historyManager && historyManager.canUndo) {
+      const success = await historyManager.undo();
+      if (success) {
+        const description = historyManager.getUndoDescription?.() || 'action';
+        showToast(`Undid: ${description}`, 'info');
+      } else {
+        showToast('Cannot undo: shape may have been modified', 'error');
+      }
+    }
+  }, [showToast]);
+
+  /**
+   * Handle redo shortcut
+   */
+  const handleRedo = useCallback(async () => {
+    const historyManager = (window as any).__historyManager;
+    if (historyManager && historyManager.canRedo) {
+      const success = await historyManager.redo();
+      if (success) {
+        const description = historyManager.getRedoDescription?.() || 'action';
+        showToast(`Redid: ${description}`, 'info');
+      }
+    }
+  }, [showToast]);
+
+  /**
+   * Open the export dialog
+   */
+  const handleOpenExportDialog = useCallback(() => {
+    if (shapes.length === 0) {
+      showToast('No shapes to export', 'error');
+      return;
+    }
+    setShowExportDialog(true);
+  }, [shapes.length, showToast]);
+
+  /**
+   * Handle export action
+   */
+  const handleExport = useCallback(async (scope: ExportScope, pixelRatio: PixelRatio) => {
+    if (!stageRef.current) {
+      setExportToastMessage({
+        id: `export-error-${Date.now()}`,
+        message: 'Canvas not ready for export',
+        type: 'error',
+      });
+      return;
+    }
+
+    setIsExporting(true);
+
+    try {
+      let dataURL: string;
+      let filename: string;
+
+      if (scope === 'canvas') {
+        // Export full canvas
+        dataURL = await exportCanvas(stageRef, { pixelRatio });
+        filename = generateFilename('collabcanvas-full');
+      } else {
+        // Export selected shape(s)
+        const selectedShape = shapes.find(s => s.id === selectedId);
+        if (!selectedShape) {
+          setExportToastMessage({
+            id: `export-error-${Date.now()}`,
+            message: 'No shapes selected for export',
+            type: 'error',
+          });
+          setIsExporting(false);
+          setShowExportDialog(false);
+          return;
+        }
+        
+        dataURL = await exportSelection([selectedShape], stageRef, { pixelRatio });
+        filename = generateFilename('collabcanvas-selection');
+      }
+
+      // Download the file
+      downloadDataURL(dataURL, filename);
+
+      // Get file size
+      const fileSize = getDataURLSize(dataURL);
+
+      // Show success toast
+      setExportToastMessage({
+        id: `export-success-${Date.now()}`,
+        message: `Exported ${filename}`,
+        type: 'success',
+        fileSize,
+      });
+
+      // Close dialog
+      setShowExportDialog(false);
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportToastMessage({
+        id: `export-error-${Date.now()}`,
+        message: error instanceof Error ? error.message : 'Export failed',
+        type: 'error',
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  }, [shapes, selectedId]);
+
   // Keyboard shortcuts registration
   useKeyboard([
     {
@@ -188,6 +316,44 @@ const Canvas = () => {
       description: 'Duplicate selected shape (Cmd+D)',
     },
     {
+      key: 'z',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleUndo();
+      },
+      description: 'Undo (Ctrl+Z)',
+    },
+    {
+      key: 'z',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleUndo();
+      },
+      description: 'Undo (Cmd+Z)',
+    },
+    {
+      key: 'z',
+      ctrlKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleRedo();
+      },
+      description: 'Redo (Ctrl+Shift+Z)',
+    },
+    {
+      key: 'z',
+      metaKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleRedo();
+      },
+      description: 'Redo (Cmd+Shift+Z)',
+    },
+    {
       key: 'Escape',
       handler: handleEscape,
       description: 'Deselect shape',
@@ -201,6 +367,39 @@ const Canvas = () => {
       key: 'r',
       handler: () => setSelectedTool('rectangle'),
       description: 'Rectangle tool (R)',
+    },
+    {
+      key: 'c',
+      handler: () => setSelectedTool('circle'),
+      description: 'Circle tool (C)',
+    },
+    {
+      key: 't',
+      handler: () => setSelectedTool('triangle'),
+      description: 'Triangle tool (T)',
+    },
+    {
+      key: 'x',
+      handler: () => setSelectedTool('text'),
+      description: 'Text tool (X)',
+    },
+    {
+      key: 'e',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleOpenExportDialog();
+      },
+      description: 'Export Canvas (Ctrl+E)',
+    },
+    {
+      key: 'e',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleOpenExportDialog();
+      },
+      description: 'Export Canvas (Cmd+E)',
     },
   ]);
 
@@ -217,6 +416,24 @@ const Canvas = () => {
     }
   }, [setStageRef]);
 
+  // Provide export handler to parent (Navbar)
+  useEffect(() => {
+    if (onExportRequest) {
+      onExportRequest(handleOpenExportDialog, shapes.length > 0);
+    }
+  }, [onExportRequest, handleOpenExportDialog, shapes.length]);
+
+  // Listen for text edit events
+  useEffect(() => {
+    const handleEditText = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setEditingTextId(customEvent.detail.shapeId);
+    };
+
+    window.addEventListener('editText', handleEditText);
+    return () => window.removeEventListener('editText', handleEditText);
+  }, []);
+
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
@@ -230,7 +447,12 @@ const Canvas = () => {
   // Update canvas cursor based on selected tool
   useEffect(() => {
     if (stageRef.current && !spacePressed && !isPanning) {
-      const cursor = selectedTool === 'rectangle' ? 'crosshair' : 'default';
+      let cursor = 'default';
+      if (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle') {
+        cursor = 'crosshair';
+      } else if (selectedTool === 'text') {
+        cursor = 'text';
+      }
       stageRef.current.container().style.cursor = cursor;
     }
   }, [selectedTool, spacePressed, isPanning]);
@@ -254,7 +476,13 @@ const Canvas = () => {
         setSpacePressed(false);
         setIsPanning(false);
         if (stageRef.current) {
-          stageRef.current.container().style.cursor = selectedTool === 'rectangle' ? 'crosshair' : 'default';
+          let cursor = 'default';
+          if (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle') {
+            cursor = 'crosshair';
+          } else if (selectedTool === 'text') {
+            cursor = 'text';
+          }
+          stageRef.current.container().style.cursor = cursor;
         }
       }
     };
@@ -335,8 +563,9 @@ const Canvas = () => {
       return;
     }
 
-    // Start drawing shape with left click on empty canvas (ONLY if rectangle tool is selected)
-    if (e.evt.button === 0 && !spacePressed && e.target === e.target.getStage() && selectedTool === 'rectangle') {
+    // Start drawing shape with left click on empty canvas (if a drawing tool is selected)
+    if (e.evt.button === 0 && !spacePressed && e.target === e.target.getStage() && 
+        (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle' || selectedTool === 'text')) {
       const pos = getRelativePointerPosition();
       if (pos) {
         setIsDrawing(true);
@@ -387,15 +616,31 @@ const Canvas = () => {
     if (isDrawing && newShape) {
       // Only create shape if it meets minimum size
       if (newShape.width >= MIN_SHAPE_SIZE && newShape.height >= MIN_SHAPE_SIZE) {
-        addShape({
-          type: 'rectangle',
+        const baseShape = {
           x: newShape.x,
           y: newShape.y,
           width: newShape.width,
           height: newShape.height,
           fill: getRandomShapeColor(),
           createdAt: Date.now(),
-        });
+        };
+
+        // Create shape based on selected tool
+        if (selectedTool === 'rectangle') {
+          addShape({ ...baseShape, type: 'rectangle' });
+        } else if (selectedTool === 'circle') {
+          addShape({ ...baseShape, type: 'circle' });
+        } else if (selectedTool === 'triangle') {
+          addShape({ ...baseShape, type: 'triangle' });
+        } else if (selectedTool === 'text') {
+          addShape({ 
+            ...baseShape, 
+            type: 'text',
+            text: 'Double-click to edit',
+            fontSize: 16,
+            fontFamily: 'Arial',
+          });
+        }
       }
       setIsDrawing(false);
       setNewShape(null);
@@ -466,6 +711,18 @@ const Canvas = () => {
   };
 
   /**
+   * Handle text save from editor
+   */
+  const handleTextSave = useCallback((shapeId: string, text: string, fontStyle: string, textDecoration: string) => {
+    updateShape(shapeId, {
+      text,
+      fontStyle,
+      textDecoration,
+    });
+    setEditingTextId(null);
+  }, [updateShape]);
+
+  /**
    * Handle shape drag end - update shape position
    */
   const handleShapeDragEnd = (id: string) => (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -475,6 +732,26 @@ const Canvas = () => {
       y: node.y(),
     });
   };
+
+  /**
+   * Handle shape transform end - update shape size/rotation
+   */
+  const handleShapeTransformEnd = useCallback((id: string) => (e: Konva.KonvaEventObject<Event>) => {
+    const node = e.target as Konva.Rect;
+    const scaleX = node.scaleX();
+    const scaleY = node.scaleY();
+
+    // Reset scale and apply to width/height
+    node.scaleX(1);
+    node.scaleY(1);
+
+    updateShape(id, {
+      x: node.x(),
+      y: node.y(),
+      width: Math.max(10, node.width() * scaleX),
+      height: Math.max(10, node.height() * scaleY),
+    });
+  }, [updateShape]);
 
   /**
    * Reset view to initial position and zoom
@@ -610,6 +887,15 @@ const Canvas = () => {
 
   return (
     <div className="relative w-full bg-gray-900" style={{ height: dimensions.height }}>
+      {/* History Manager - handles undo/redo logic */}
+      <HistoryManager />
+
+      {/* History Buttons */}
+      <HistoryButtons
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+      />
+
       <Stage
         ref={stageRef}
         width={dimensions.width}
@@ -660,24 +946,77 @@ const Canvas = () => {
               isSelected={shape.id === selectedId}
               onSelect={() => handleShapeSelect(shape.id)}
               onDragEnd={handleShapeDragEnd(shape.id)}
+              onTransformEnd={handleShapeTransformEnd(shape.id)}
             />
           ))}
 
           {/* Preview of shape being drawn */}
-          {isDrawing && newShape && newShape.width > 0 && newShape.height > 0 && (
-            <Rect
-              x={newShape.x}
-              y={newShape.y}
-              width={newShape.width}
-              height={newShape.height}
-              fill={getRandomShapeColor()}
-              opacity={0.5}
-              stroke="#0066ff"
-              strokeWidth={2}
-              dash={[10, 5]}
-              listening={false}
-            />
-          )}
+          {isDrawing && newShape && newShape.width > 0 && newShape.height > 0 && (() => {
+            const previewProps = {
+              opacity: 0.5,
+              stroke: '#0066ff',
+              strokeWidth: 2,
+              dash: [10, 5],
+              listening: false,
+              fill: getRandomShapeColor(),
+            };
+
+            if (selectedTool === 'rectangle') {
+              return (
+                <Rect
+                  x={newShape.x}
+                  y={newShape.y}
+                  width={newShape.width}
+                  height={newShape.height}
+                  {...previewProps}
+                />
+              );
+            } else if (selectedTool === 'circle') {
+              return (
+                <Circle
+                  x={newShape.x + newShape.width / 2}
+                  y={newShape.y + newShape.height / 2}
+                  radius={Math.min(newShape.width, newShape.height) / 2}
+                  {...previewProps}
+                />
+              );
+            } else if (selectedTool === 'triangle') {
+              const halfWidth = newShape.width / 2;
+              return (
+                <Line
+                  x={newShape.x}
+                  y={newShape.y}
+                  points={[
+                    halfWidth, 0,
+                    newShape.width, newShape.height,
+                    0, newShape.height,
+                  ]}
+                  closed
+                  {...previewProps}
+                />
+              );
+            } else if (selectedTool === 'text') {
+              return (
+                <Text
+                  x={newShape.x}
+                  y={newShape.y}
+                  width={newShape.width}
+                  height={newShape.height}
+                  text="Double-click to edit"
+                  fontSize={16}
+                  fontFamily="Arial"
+                  fill="white"
+                  align="center"
+                  verticalAlign="middle"
+                  opacity={0.5}
+                  stroke="#0066ff"
+                  strokeWidth={2}
+                  listening={false}
+                />
+              );
+            }
+            return null;
+          })()}
         </Layer>
       </Stage>
 
@@ -738,6 +1077,38 @@ const Canvas = () => {
         message={toastMessage}
         onClose={() => setToastMessage(null)}
       />
+
+      {/* Export Toast */}
+      <ExportToast
+        message={exportToastMessage}
+        onClose={() => setExportToastMessage(null)}
+      />
+
+      {/* Text Editor */}
+      {editingTextId && stageRef.current && (() => {
+        const shape = shapes.find(s => s.id === editingTextId);
+        if (!shape || shape.type !== 'text') return null;
+
+        return (
+          <TextEditor
+            shape={shape}
+            onSave={(text, fontStyle, textDecoration) => handleTextSave(editingTextId, text, fontStyle, textDecoration)}
+            onClose={() => setEditingTextId(null)}
+            stagePosition={{ x: stageRef.current!.x(), y: stageRef.current!.y() }}
+            stageScale={stageRef.current!.scaleX()}
+          />
+        );
+      })()}
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <ExportDialog
+          onExport={handleExport}
+          onCancel={() => setShowExportDialog(false)}
+          hasSelection={selectedId !== null}
+          isExporting={isExporting}
+        />
+      )}
     </div>
   );
 };
