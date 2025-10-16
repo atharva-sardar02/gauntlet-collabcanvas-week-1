@@ -1,5 +1,5 @@
 // Tool types
-export type ToolType = 'select' | 'rectangle' | 'circle' | 'triangle' | 'text' | null;
+export type ToolType = 'select' | 'rectangle' | 'circle' | 'triangle' | 'star' | 'text' | null;
 
 // Tool configuration
 export interface Tool {
@@ -43,6 +43,14 @@ export const TOOLS: Tool[] = [
     description: 'Draw triangles',
     cursor: 'crosshair',
     shortcut: 'T',
+  },
+  {
+    id: 'star',
+    name: 'Star',
+    icon: '★',
+    description: 'Draw stars',
+    cursor: 'crosshair',
+    shortcut: 'S',
   },
   {
     id: 'text',

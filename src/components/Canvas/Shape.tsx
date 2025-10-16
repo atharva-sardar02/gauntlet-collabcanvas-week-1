@@ -1,5 +1,5 @@
 import { useContext, useRef, useEffect } from 'react';
-import { Rect, Circle, Line, Text, Transformer } from 'react-konva';
+import { Rect, Circle, Line, Text, Transformer, Star } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import type { Shape as ShapeType } from '../../contexts/CanvasContext';
@@ -50,22 +50,33 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: Shape
     }
   };
 
+  // Different selection styles for text vs other shapes
   const commonProps = {
     ref: shapeRef,
     id: shape.id,
     x: shape.x,
     y: shape.y,
-    fill: shape.type === 'text' ? 'white' : shape.fill, // Force white for text
-    stroke: isSelected ? (shape.type === 'text' ? '#FFD700' : '#0066ff') : shape.isLocked ? shape.lockedByColor || '#ff0000' : undefined,
-    strokeWidth: isSelected || shape.isLocked ? (shape.type === 'text' ? 2 : 3) : 0,
+    // Text: yellow when selected, white when not selected
+    // Other shapes: keep their fill color
+    fill: shape.type === 'text' 
+      ? (isSelected ? '#FFD700' : 'white')  // Yellow when selected, white when not
+      : shape.fill,
+    // Other shapes: white border when selected
+    // Text: no border
+    stroke: isSelected && shape.type !== 'text'
+      ? 'white'
+      : shape.isLocked ? shape.lockedByColor || '#ff0000' : undefined,
+    strokeWidth: isSelected && shape.type !== 'text' || shape.isLocked ? 2 : 0,
     draggable: !shape.isLocked,
     onClick: onSelect,
     onTap: onSelect,
     onDragEnd: handleDragEnd,
     onTransformEnd: handleTransformEnd,
-    shadowBlur: isSelected ? 10 : 0,
-    shadowColor: isSelected ? (shape.type === 'text' ? '#FFD700' : '#0066ff') : undefined,
-    shadowOpacity: isSelected ? 0.5 : 0,
+    // Other shapes: solid border with glow
+    // Text shapes: no border, no glow
+    shadowBlur: isSelected && shape.type !== 'text' ? 5 : 0,
+    shadowColor: isSelected && shape.type !== 'text' ? 'white' : undefined,
+    shadowOpacity: isSelected && shape.type !== 'text' ? 0.8 : 0,
   };
 
   const renderShape = () => {
@@ -98,6 +109,18 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: Shape
               0, shape.height,                 // Bottom left
             ]}
             closed
+          />
+        );
+
+      case 'star':
+        return (
+          <Star
+            {...commonProps}
+            numPoints={5}
+            innerRadius={(Math.min(shape.width, shape.height) / 2) * 0.5}
+            outerRadius={Math.min(shape.width, shape.height) / 2}
+            offsetX={-(shape.width / 2)}
+            offsetY={-(shape.height / 2)}
           />
         );
 

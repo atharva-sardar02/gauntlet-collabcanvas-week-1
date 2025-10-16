@@ -713,11 +713,12 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
   /**
    * Handle text save from editor
    */
-  const handleTextSave = useCallback((shapeId: string, text: string, fontStyle: string, textDecoration: string) => {
+  const handleTextSave = useCallback((shapeId: string, text: string, fontStyle: string, textDecoration: string, fontSize: number) => {
     updateShape(shapeId, {
       text,
       fontStyle,
       textDecoration,
+      fontSize,
     });
     setEditingTextId(null);
   }, [updateShape]);
@@ -1092,7 +1093,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         return (
           <TextEditor
             shape={shape}
-            onSave={(text, fontStyle, textDecoration) => handleTextSave(editingTextId, text, fontStyle, textDecoration)}
+            onSave={(text, fontStyle, textDecoration, fontSize) => handleTextSave(editingTextId, text, fontStyle, textDecoration, fontSize)}
             onClose={() => setEditingTextId(null)}
             stagePosition={{ x: stageRef.current!.x(), y: stageRef.current!.y() }}
             stageScale={stageRef.current!.scaleX()}

@@ -8,7 +8,7 @@ import type { Operation } from '../types/operations';
 // Define the shape interface
 export interface Shape {
   id: string;
-  type: 'rectangle' | 'circle' | 'triangle' | 'text';
+  type: 'rectangle' | 'circle' | 'triangle' | 'star' | 'text';
   x: number;
   y: number;
   width: number;
