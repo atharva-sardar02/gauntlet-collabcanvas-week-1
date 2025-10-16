@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useContext } from 'react';
+import { useEffect, useRef, useState, useContext, useCallback } from 'react';
 import { Stage, Layer, Rect, Line } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
@@ -7,9 +7,11 @@ import Toolbox from './Toolbox';
 import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
 import PresenceList from '../Collaboration/PresenceList';
+import ShortcutToast, { type ToastMessage } from '../UI/ShortcutToast';
 import { useCursors } from '../../hooks/useCursors';
 import { usePresence } from '../../hooks/usePresence';
 import { useAuth } from '../../hooks/useAuth';
+import { useKeyboard, useKeyRepeat } from '../../hooks/useKeyboard';
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -20,6 +22,8 @@ import {
   MAX_ZOOM,
   DEFAULT_ZOOM,
   MIN_SHAPE_SIZE,
+  NUDGE_SMALL,
+  NUDGE_LARGE,
   getViewportDimensions,
   getRandomShapeColor,
 } from '../../utils/constants';
@@ -32,7 +36,7 @@ const Canvas = () => {
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, loading, error, setStageRef, selectShape, addShape, updateShape, deleteShape } = context;
+  const { shapes, selectedId, loading, error, setStageRef, selectShape, addShape, updateShape, deleteShape, duplicateShape, nudgeShape } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
@@ -46,6 +50,9 @@ const Canvas = () => {
   const [isDrawing, setIsDrawing] = useState(false);
   const [newShape, setNewShape] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState<ToastMessage | null>(null);
+  
   // Force re-render when stage transforms (for cursor positioning)
   const [, setUpdateTrigger] = useState(0);
 
@@ -57,6 +64,151 @@ const Canvas = () => {
 
   // Current user for presence list
   const { currentUser } = useAuth();
+
+  /**
+   * Show a toast notification
+   */
+  const showToast = useCallback((message: string, type: ToastMessage['type'] = 'success') => {
+    setToastMessage({
+      id: `toast-${Date.now()}`,
+      message,
+      type,
+    });
+  }, []);
+
+  /**
+   * Handle duplicate shortcut (Ctrl/Cmd + D)
+   */
+  const handleDuplicate = useCallback(async () => {
+    if (!selectedId) return;
+    
+    const shape = shapes.find(s => s.id === selectedId);
+    if (!shape) return;
+    
+    // Don't duplicate if locked by another user
+    if (shape.isLocked) {
+      showToast('Cannot duplicate locked shape', 'error');
+      return;
+    }
+
+    await duplicateShape(selectedId);
+    showToast('Shape duplicated', 'success');
+  }, [selectedId, shapes, duplicateShape, showToast]);
+
+  /**
+   * Handle delete shortcut (Delete/Backspace)
+   */
+  const handleDelete = useCallback(async () => {
+    if (!selectedId) return;
+    
+    const shape = shapes.find(s => s.id === selectedId);
+    if (!shape) return;
+    
+    // Don't delete if locked by another user
+    if (shape.isLocked) {
+      showToast('Cannot delete locked shape', 'error');
+      return;
+    }
+
+    await deleteShape(selectedId);
+    showToast('Shape deleted', 'success');
+  }, [selectedId, shapes, deleteShape, showToast]);
+
+  /**
+   * Handle escape to deselect
+   */
+  const handleEscape = useCallback(() => {
+    if (selectedId) {
+      selectShape(null);
+      showToast('Selection cleared', 'info');
+    }
+  }, [selectedId, selectShape, showToast]);
+
+  /**
+   * Handle arrow key nudging with repeat
+   */
+  const handleNudge = useCallback((key: string, shiftKey: boolean) => {
+    if (!selectedId) return;
+    
+    const shape = shapes.find(s => s.id === selectedId);
+    if (!shape || shape.isLocked) return;
+
+    const amount = shiftKey ? NUDGE_LARGE : NUDGE_SMALL;
+    
+    let direction: 'up' | 'down' | 'left' | 'right' | null = null;
+    
+    switch (key) {
+      case 'ArrowUp':
+        direction = 'up';
+        break;
+      case 'ArrowDown':
+        direction = 'down';
+        break;
+      case 'ArrowLeft':
+        direction = 'left';
+        break;
+      case 'ArrowRight':
+        direction = 'right';
+        break;
+    }
+
+    if (direction) {
+      nudgeShape(selectedId, direction, amount);
+    }
+  }, [selectedId, shapes, nudgeShape]);
+
+  // Keyboard shortcuts registration
+  useKeyboard([
+    {
+      key: 'Delete',
+      handler: handleDelete,
+      description: 'Delete selected shape',
+    },
+    {
+      key: 'Backspace',
+      handler: handleDelete,
+      description: 'Delete selected shape',
+    },
+    {
+      key: 'd',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleDuplicate();
+      },
+      description: 'Duplicate selected shape (Ctrl+D)',
+    },
+    {
+      key: 'd',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleDuplicate();
+      },
+      description: 'Duplicate selected shape (Cmd+D)',
+    },
+    {
+      key: 'Escape',
+      handler: handleEscape,
+      description: 'Deselect shape',
+    },
+    {
+      key: 'v',
+      handler: () => setSelectedTool('select'),
+      description: 'Select tool (V)',
+    },
+    {
+      key: 'r',
+      handler: () => setSelectedTool('rectangle'),
+      description: 'Rectangle tool (R)',
+    },
+  ]);
+
+  // Arrow key repeat for nudging
+  useKeyRepeat(
+    handleNudge,
+    ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
+  );
 
   // Set the stage ref in context
   useEffect(() => {
@@ -83,32 +235,9 @@ const Canvas = () => {
     }
   }, [selectedTool, spacePressed, isPanning]);
 
-  // Handle keyboard events for tools, spacebar panning, and delete
+  // Handle spacebar panning (keep separate from keyboard shortcuts to avoid conflicts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Tool shortcuts (V for select, R for rectangle)
-      if (e.key === 'v' || e.key === 'V') {
-        e.preventDefault();
-        setSelectedTool('select');
-        return;
-      }
-      if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        setSelectedTool('rectangle');
-        return;
-      }
-
-      // Delete key functionality
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) {
-        e.preventDefault();
-        const shape = shapes.find(s => s.id === selectedId);
-        // Only delete if not locked by another user
-        if (shape && !shape.isLocked) {
-          deleteShape(selectedId);
-        }
-        return;
-      }
-
       // Spacebar panning
       if (e.code === 'Space' && !spacePressed && !isDrawing) {
         e.preventDefault();
@@ -137,7 +266,7 @@ const Canvas = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [spacePressed, selectedId, shapes, deleteShape, isDrawing, selectedTool]);
+  }, [spacePressed, isDrawing, selectedTool]);
 
   // Calculate initial position to center the canvas
   const initialX = -CANVAS_CENTER_X + dimensions.width / 2;
@@ -602,6 +731,12 @@ const Canvas = () => {
       <PresenceList 
         users={onlineUsers} 
         currentUserId={currentUser?.uid}
+      />
+
+      {/* Toast Notifications */}
+      <ShortcutToast
+        message={toastMessage}
+        onClose={() => setToastMessage(null)}
       />
     </div>
   );

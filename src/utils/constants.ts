@@ -74,3 +74,22 @@ export const getRandomCursorColor = (): string => {
   return CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];
 };
 
+// Keyboard Shortcuts
+export const SHORTCUTS = {
+  DELETE: ['Delete', 'Backspace'],
+  DUPLICATE: 'KeyD', // Will check for Ctrl/Cmd modifier
+  NUDGE_UP: 'ArrowUp',
+  NUDGE_DOWN: 'ArrowDown',
+  NUDGE_LEFT: 'ArrowLeft',
+  NUDGE_RIGHT: 'ArrowRight',
+  ESCAPE: 'Escape',
+  COMMAND_BAR: 'Slash', // Ctrl+/ or Cmd+/
+} as const;
+
+// Nudge amounts for arrow keys
+export const NUDGE_SMALL = 1; // Default nudge (1px)
+export const NUDGE_LARGE = 10; // Shift + arrow (10px)
+
+// Duplicate shape offset
+export const DUPLICATE_OFFSET = 20; // Offset for duplicated shapes (px)
+

@@ -1,0 +1,9 @@
+Description: Project memory and workflow rules for CollabCanvas
+
+Content:
+- Always read `memory-bank/*.md` at the start of each task.
+- Update `activeContext.md` and `progress.md` after significant changes.
+- Capture architecture decisions in `systemPatterns.md`.
+- Keep `techContext.md` synced with `package.json`.
+- Use `.cursor/rules/` for learned project patterns; reference with @file when needed.
+

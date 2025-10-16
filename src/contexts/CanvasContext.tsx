@@ -1,6 +1,7 @@
 import { createContext, useState, type ReactNode, useCallback } from 'react';
 import Konva from 'konva';
 import { useCanvas as useCanvasHook } from '../hooks/useCanvas';
+import { DUPLICATE_OFFSET, CANVAS_WIDTH, CANVAS_HEIGHT } from '../utils/constants';
 
 // Define the shape interface
 export interface Shape {
@@ -35,6 +36,8 @@ export interface CanvasContextType {
   setStageRef: (ref: React.RefObject<Konva.Stage>) => void;
   lockShape: (id: string, userColor: string) => Promise<void>;
   unlockShape: (id: string) => Promise<void>;
+  duplicateShape: (id: string) => Promise<string | null>;
+  nudgeShape: (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number) => Promise<void>;
 }
 
 // Create the context
@@ -135,6 +138,70 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     [unlockShapeInFirebase]
   );
 
+  /**
+   * Duplicate a shape
+   * Creates a deep clone with a new ID and offset position
+   * @param id - ID of shape to duplicate
+   * @returns ID of the new duplicated shape, or null if not found
+   */
+  const duplicateShape = useCallback(
+    async (id: string): Promise<string | null> => {
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return null;
+
+      // Clone the shape with a new ID and offset position
+      const duplicatedShape: Omit<Shape, 'id'> = {
+        type: shape.type,
+        x: Math.min(shape.x + DUPLICATE_OFFSET, CANVAS_WIDTH - shape.width),
+        y: Math.min(shape.y + DUPLICATE_OFFSET, CANVAS_HEIGHT - shape.height),
+        width: shape.width,
+        height: shape.height,
+        fill: shape.fill,
+        createdAt: Date.now(),
+      };
+
+      await addShapeToFirebase(duplicatedShape);
+      
+      // Return a generated ID (in practice, this would come from Firebase)
+      // For now, we'll return a placeholder that the caller can use
+      return `shape-${Date.now()}-duplicated`;
+    },
+    [shapes, addShapeToFirebase]
+  );
+
+  /**
+   * Nudge a shape by a specified amount in a direction
+   * @param id - ID of shape to nudge
+   * @param direction - Direction to nudge ('up', 'down', 'left', 'right')
+   * @param amount - Amount to nudge in pixels
+   */
+  const nudgeShape = useCallback(
+    async (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number) => {
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return;
+
+      let updates: Partial<Shape> = {};
+
+      switch (direction) {
+        case 'up':
+          updates = { y: Math.max(0, shape.y - amount) };
+          break;
+        case 'down':
+          updates = { y: Math.min(CANVAS_HEIGHT - shape.height, shape.y + amount) };
+          break;
+        case 'left':
+          updates = { x: Math.max(0, shape.x - amount) };
+          break;
+        case 'right':
+          updates = { x: Math.min(CANVAS_WIDTH - shape.width, shape.x + amount) };
+          break;
+      }
+
+      await updateShapeInFirebase(id, updates);
+    },
+    [shapes, updateShapeInFirebase]
+  );
+
   const value: CanvasContextType = {
     shapes,
     selectedId,
@@ -148,6 +215,8 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     setStageRef,
     lockShape,
     unlockShape,
+    duplicateShape,
+    nudgeShape,
   };
 
   return (
