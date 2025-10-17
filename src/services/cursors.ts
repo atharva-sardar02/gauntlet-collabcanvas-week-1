@@ -20,6 +20,9 @@ import { rtdb } from './firebase';
 
 const CANVAS_ID = 'global-canvas-v1';
 
+// Inactivity timeout: 2 minutes (must match presence.ts)
+const INACTIVITY_TIMEOUT_MS = 2 * 60 * 1000;
+
 export interface CursorData {
   displayName: string;
   cursorColor: string;
@@ -63,7 +66,7 @@ export const updateCursorPosition = async (
 };
 
 /**
- * Subscribe to all cursors in the canvas
+ * Subscribe to all cursors in the canvas (filters inactive users)
  * @param callback - Function to call when cursors update
  * @returns Unsubscribe function
  */
@@ -76,11 +79,25 @@ export const subscribeToCursors = (
     cursorsRef,
     (snapshot) => {
       const cursors: CursorsMap = {};
+      const now = Date.now();
       
       if (snapshot.exists()) {
         const data = snapshot.val();
         Object.keys(data).forEach((userId) => {
-          cursors[userId] = data[userId];
+          const userData = data[userId];
+          
+          // Filter out inactive users
+          // If lastSeen is a server timestamp object, keep it (assume active)
+          if (typeof userData.lastSeen === 'object') {
+            cursors[userId] = userData;
+          } else if (typeof userData.lastSeen === 'number') {
+            const timeSinceLastSeen = now - userData.lastSeen;
+            
+            // Only include cursors from users active within timeout
+            if (timeSinceLastSeen < INACTIVITY_TIMEOUT_MS) {
+              cursors[userId] = userData;
+            }
+          }
         });
       }
       

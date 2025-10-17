@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import * as presenceService from '../services/presence';
 import type { OnlineUser } from '../services/presence';
+import { 
+  HEARTBEAT_INTERVAL_MS, 
+  CLEANUP_INTERVAL_MS 
+} from '../services/presence';
 import { getRandomCursorColor } from '../utils/constants';
 
 /**
@@ -27,8 +31,21 @@ export const usePresence = (userColor?: string) => {
       setOnlineUsers(users);
     });
 
+    // Set up heartbeat to keep user active
+    // Updates lastSeen at configured interval (default: 30 seconds)
+    const heartbeatInterval = setInterval(() => {
+      presenceService.updateHeartbeat(currentUser.uid);
+    }, HEARTBEAT_INTERVAL_MS);
+
+    // Clean up inactive users at configured interval (default: 1 minute)
+    const cleanupInterval = setInterval(() => {
+      presenceService.cleanupInactiveUsers(currentUser.uid);
+    }, CLEANUP_INTERVAL_MS);
+
     return () => {
       unsubscribe();
+      clearInterval(heartbeatInterval);
+      clearInterval(cleanupInterval);
       // Set user as offline on unmount
       presenceService.setUserOffline(currentUser.uid);
     };
