@@ -11,7 +11,7 @@ import type { Shape } from '../contexts/CanvasContext';
  * @param shapeId - ID of shape to bring to front
  * @returns New zIndex value for the shape
  */
-export const bringToFront = (shapes: Shape[], shapeId: string): number => {
+export const bringToFront = (shapes: Shape[], _shapeId: string): number => {
   if (shapes.length === 0) return 1;
   
   // Find the highest zIndex
@@ -27,7 +27,7 @@ export const bringToFront = (shapes: Shape[], shapeId: string): number => {
  * @param shapeId - ID of shape to send to back
  * @returns New zIndex value for the shape
  */
-export const sendToBack = (shapes: Shape[], shapeId: string): number => {
+export const sendToBack = (shapes: Shape[], _shapeId: string): number => {
   if (shapes.length === 0) return 1;
   
   // Find the lowest zIndex
@@ -111,8 +111,6 @@ export const getLayerPosition = (
   if (!currentShape) {
     return { current: 0, total: shapes.length };
   }
-  
-  const currentZIndex = currentShape.zIndex || 0;
   
   // Sort shapes by zIndex to find position
   const sortedShapes = [...shapes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));

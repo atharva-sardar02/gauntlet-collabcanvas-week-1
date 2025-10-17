@@ -1006,6 +1006,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
    */
   const handleShapeTransformEnd = useCallback((id: string) => (e: Konva.KonvaEventObject<Event>) => {
     const node = e.target as Konva.Rect;
+    const shape = shapes.find(s => s.id === id);
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
 
@@ -1013,13 +1014,25 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
     node.scaleX(1);
     node.scaleY(1);
 
+    const newWidth = Math.max(10, node.width() * scaleX);
+    const newHeight = Math.max(10, node.height() * scaleY);
+    let newX = node.x();
+    let newY = node.y();
+
+    // Circle and Star shapes are rendered centered, so adjust position back to top-left
+    // When resizing, the node position is the center, so we need to convert back to top-left
+    if (shape?.type === 'star' || shape?.type === 'circle') {
+      newX = node.x() - (newWidth / 2);
+      newY = node.y() - (newHeight / 2);
+    }
+
     updateShape(id, {
-      x: node.x(),
-      y: node.y(),
-      width: Math.max(10, node.width() * scaleX),
-      height: Math.max(10, node.height() * scaleY),
+      x: newX,
+      y: newY,
+      width: newWidth,
+      height: newHeight,
     });
-  }, [updateShape]);
+  }, [updateShape, shapes]);
 
   /**
    * Reset view to initial position and zoom

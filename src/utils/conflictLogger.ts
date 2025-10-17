@@ -3,12 +3,14 @@ import type { ConflictType, ConflictResult } from './conflictDetection';
 /**
  * Log level for conflict logging
  */
-export enum LogLevel {
-  DEBUG = 'debug',
-  INFO = 'info',
-  WARN = 'warn',
-  ERROR = 'error',
-}
+export const LogLevel = {
+  DEBUG: 'debug',
+  INFO: 'info',
+  WARN: 'warn',
+  ERROR: 'error',
+} as const;
+
+export type LogLevel = typeof LogLevel[keyof typeof LogLevel];
 
 /**
  * Conflict log entry
@@ -52,7 +54,7 @@ class ConflictLogger {
   private maxLogSize: number = 1000; // Keep last 1000 logs
 
   constructor() {
-    this.isDevelopment = import.meta.env.DEV || process.env.NODE_ENV === 'development';
+    this.isDevelopment = import.meta.env.DEV;
   }
 
   /**

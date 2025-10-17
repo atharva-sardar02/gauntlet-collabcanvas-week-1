@@ -14,7 +14,7 @@ export interface ExportOptions {
  * @returns Data URL of the exported image
  */
 export const exportCanvas = async (
-  stageRef: React.RefObject<Konva.Stage>,
+  stageRef: React.RefObject<Konva.Stage | null>,
   options: ExportOptions = {}
 ): Promise<string> => {
   const stage = stageRef.current;
@@ -87,7 +87,7 @@ export const exportCanvas = async (
  */
 export const exportSelection = async (
   shapes: Shape[],
-  stageRef: React.RefObject<Konva.Stage>,
+  stageRef: React.RefObject<Konva.Stage | null>,
   options: ExportOptions = {}
 ): Promise<string> => {
   const stage = stageRef.current;

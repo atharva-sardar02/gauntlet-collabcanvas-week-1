@@ -82,8 +82,8 @@ export function useConflictResolution(
       shapeId: string,
       updates: Partial<Shape>,
       updateCallback: (id: string, updates: Partial<Shape>) => Promise<void>,
-      userName: string = 'Unknown User',
-      userColor: string = '#DC2626'
+      _userName: string = 'Unknown User',
+      _userColor: string = '#DC2626'
     ): Promise<void> => {
       if (!userId) return;
 
@@ -192,7 +192,7 @@ export function useConflictResolution(
     async (
       shapeId: string,
       deleteCallback: (id: string) => Promise<void>,
-      getUserName: (userId: string) => string = () => 'Unknown User'
+      _getUserName: (_userId: string) => string = () => 'Unknown User'
     ): Promise<boolean> => {
       if (!userId) return false;
 

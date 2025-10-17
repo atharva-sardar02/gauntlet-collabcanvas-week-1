@@ -31,8 +31,8 @@ export class RateLimiter<T = any> {
   private config: Required<RateLimiterConfig>;
   private queues: Map<string, QueuedUpdate<T>[]> = new Map();
   private lastUpdateTime: Map<string, number> = new Map();
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
-  private throttleTimers: Map<string, NodeJS.Timeout> = new Map();
+  private debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private throttleTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private updateCounts: Map<string, number[]> = new Map(); // Timestamps of updates in last second
 
   constructor(config: RateLimiterConfig = {}) {
@@ -314,7 +314,7 @@ export class RateLimiter<T = any> {
     });
 
     const updateRates = new Map<string, number>();
-    this.updateCounts.forEach((counts, shapeId) => {
+    this.updateCounts.forEach((_counts, shapeId) => {
       updateRates.set(shapeId, this.getUpdateRate(shapeId));
     });
 
@@ -359,7 +359,7 @@ export function debounce<T extends (...args: any[]) => any>(
   func: T,
   delayMs: number
 ): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout>;
 
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
@@ -378,7 +378,7 @@ export function throttle<T extends (...args: any[]) => any>(
   intervalMs: number
 ): (...args: Parameters<T>) => void {
   let lastCallTime = 0;
-  let timeoutId: NodeJS.Timeout | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
   return (...args: Parameters<T>) => {
     const now = Date.now();
@@ -409,7 +409,7 @@ export function throttle<T extends (...args: any[]) => any>(
  */
 export class UpdateBatcher<T = any> {
   private batches: Map<string, T[]> = new Map();
-  private timers: Map<string, NodeJS.Timeout> = new Map();
+  private timers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private batchDelayMs: number;
 
   constructor(batchDelayMs: number = 100) {

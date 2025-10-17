@@ -3,15 +3,17 @@ import type { Operation } from '../types/operations';
 /**
  * Types of conflicts that can occur
  */
-export enum ConflictType {
-  SIMULTANEOUS_MOVE = 'simultaneous_move',
-  SIMULTANEOUS_RESIZE = 'simultaneous_resize',
-  SIMULTANEOUS_ROTATE = 'simultaneous_rotate',
-  RAPID_EDIT_STORM = 'rapid_edit_storm',
-  DELETE_WHILE_EDITING = 'delete_while_editing',
-  CREATE_COLLISION = 'create_collision',
-  NONE = 'none',
-}
+export const ConflictType = {
+  SIMULTANEOUS_MOVE: 'simultaneous_move',
+  SIMULTANEOUS_RESIZE: 'simultaneous_resize',
+  SIMULTANEOUS_ROTATE: 'simultaneous_rotate',
+  RAPID_EDIT_STORM: 'rapid_edit_storm',
+  DELETE_WHILE_EDITING: 'delete_while_editing',
+  CREATE_COLLISION: 'create_collision',
+  NONE: 'none',
+} as const;
+
+export type ConflictType = typeof ConflictType[keyof typeof ConflictType];
 
 /**
  * Result of conflict detection

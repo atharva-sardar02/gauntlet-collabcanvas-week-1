@@ -8,7 +8,7 @@ interface PendingOperation {
   id: string;
   operation: Operation;
   timestamp: number;
-  timeout: NodeJS.Timeout;
+  timeout: ReturnType<typeof setTimeout>;
   retries: number;
 }
 
@@ -309,7 +309,7 @@ export function debounceOperation(
   operation: (op: Operation) => void,
   delay: number
 ): (op: Operation) => void {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: ReturnType<typeof setTimeout>;
   
   return (op: Operation) => {
     clearTimeout(timeoutId);

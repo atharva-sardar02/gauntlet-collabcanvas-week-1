@@ -385,8 +385,8 @@ export function useConflictResolutionUI() {
    * Handle user action on conflict
    */
   const handleConflictAction = (
-    action: ConflictAction,
-    conflictId: string
+    _action: ConflictAction,
+    _conflictId: string
   ): Promise<void> => {
     return new Promise((resolve) => {
       // Clear current conflict
