@@ -7,9 +7,11 @@ import ChangePasswordModal from '../Auth/ChangePasswordModal';
 interface NavbarProps {
   onExport?: () => void;
   hasShapes?: boolean;
+  isToolboxVisible?: boolean;
+  onToggleToolbox?: () => void;
 }
 
-const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
+const Navbar = ({ onExport, hasShapes = false, isToolboxVisible = true, onToggleToolbox }: NavbarProps) => {
   const { currentUser, logout } = useAuth();
   const { openCommandBar } = useAIAgent();
   const { onlineUsers } = usePresence();
@@ -93,6 +95,34 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
                   Ctrl+/
                 </kbd>
               </button>
+
+              {/* Tools Toggle Button */}
+              {onToggleToolbox && (
+                <button
+                  onClick={onToggleToolbox}
+                  className={`flex items-center gap-2 font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:scale-105 ${
+                    isToolboxVisible
+                      ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                      : 'bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-700'
+                  }`}
+                  title={isToolboxVisible ? "Hide Tools" : "Show Tools"}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Tools</span>
+                </button>
+              )}
 
               {/* Export Button */}
               {onExport && (

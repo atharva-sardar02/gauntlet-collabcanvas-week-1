@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TOOLS } from '../../utils/tools';
 import type { ToolType } from '../../utils/tools';
 
@@ -23,6 +23,8 @@ interface ToolboxProps {
   layerInfo?: { current: number; total: number } | null;
   // Canvas actions
   onClearCanvas?: () => void;
+  // Visibility control
+  isVisible?: boolean;
 }
 
 const Toolbox = ({ 
@@ -42,9 +44,79 @@ const Toolbox = ({
   layerControlsEnabled = false,
   layerInfo = null,
   onClearCanvas,
+  isVisible = true,
 }: ToolboxProps) => {
   const tools = TOOLS;
   const [tooltip, setTooltip] = useState<string | null>(null);
+  
+  // Draggable state
+  const [position, setPosition] = useState(() => {
+    const saved = localStorage.getItem('toolbox-position');
+    return saved ? JSON.parse(saved) : { x: 16, y: 80 };
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const toolboxRef = useRef<HTMLDivElement>(null);
+
+  // Save position to localStorage
+  useEffect(() => {
+    localStorage.setItem('toolbox-position', JSON.stringify(position));
+  }, [position]);
+
+  // Handle drag start
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only allow dragging from the header area
+    if ((e.target as HTMLElement).closest('.drag-handle')) {
+      e.preventDefault();
+      setIsDragging(true);
+      const rect = toolboxRef.current?.getBoundingClientRect();
+      if (rect) {
+        setDragOffset({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }
+    }
+  };
+
+  // Handle dragging with viewport constraints
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!toolboxRef.current) return;
+      
+      const toolboxRect = toolboxRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      // Calculate new position
+      let newX = e.clientX - dragOffset.x;
+      let newY = e.clientY - dragOffset.y;
+
+      // Constrain to viewport bounds
+      // Keep at least 50px of toolbox visible on each edge
+      const minVisible = 50;
+      newX = Math.max(minVisible - toolboxRect.width, Math.min(newX, viewportWidth - minVisible));
+      newY = Math.max(0, Math.min(newY, viewportHeight - minVisible));
+
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset]);
+
+  if (!isVisible) return null;
 
   const alignmentButtons = [
     {
@@ -146,42 +218,62 @@ const Toolbox = ({
   ];
 
   return (
-    <div className="fixed left-4 top-20 bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-2xl p-3 border border-gray-700 max-h-[calc(100vh-6rem)] overflow-y-auto" style={{ zIndex: 30 }}>
-      {/* DRAWING TOOLS SECTION */}
-      <div className="flex flex-col gap-2">
-        <div className="text-gray-400 text-xs font-semibold px-2 mb-1">
-          TOOLS
+    <div 
+      ref={toolboxRef}
+      className="fixed bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-700 select-none" 
+      style={{ 
+        zIndex: 30,
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        cursor: isDragging ? 'grabbing' : 'default',
+        maxHeight: '90vh',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Drag Handle Header */}
+      <div 
+        className="drag-handle bg-gray-900/50 px-2 py-1.5 border-b border-gray-700 flex items-center justify-between cursor-grab active:cursor-grabbing rounded-t-xl"
+        onMouseDown={handleMouseDown}
+      >
+        <div className="flex items-center gap-1.5">
+          <svg className="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h.01M8 12h.01M8 18h.01M12 6h.01M12 12h.01M12 18h.01M16 6h.01M16 12h.01M16 18h.01" />
+          </svg>
+          <span className="text-[10px] font-semibold text-gray-400">TOOLBOX</span>
         </div>
+        <div className="text-[9px] text-gray-500">Drag</div>
+      </div>
+
+      <div className="p-2" style={{ overflow: 'hidden' }}>
+        {/* DRAWING TOOLS SECTION */}
+        <div className="flex flex-col gap-1.5">
+          <div className="text-gray-400 text-[10px] font-semibold px-1 mb-0.5">
+            TOOLS
+          </div>
         
         {/* Tools in 2-column grid */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-1">
           {tools.map((tool) => (
             <button
               key={tool.id}
               onClick={() => onSelectTool(tool.id)}
               className={`
-                group relative flex items-center justify-center w-12 h-12 rounded-lg
-                transition-all duration-200 ease-out z-10
+                group relative flex items-center justify-center w-10 h-8 rounded
+                transition-all duration-200 z-10
                 ${
                   selectedTool === tool.id
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/50 scale-105'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                 }
               `}
               title={tool.name}
             >
-              <span className="text-2xl relative z-10">{tool.icon}</span>
+              <span className="text-lg relative z-10">{tool.icon}</span>
               
-              {/* Tooltip - positioned at bottom-right of button */}
-              <div className="absolute left-full bottom-0 ml-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+              {/* Tooltip */}
+              <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
                    style={{ zIndex: 10000 }}>
                 <div className="font-semibold">{tool.name}</div>
-                <div className="text-gray-400 text-xs">{tool.description}</div>
-                {tool.shortcut && (
-                  <div className="text-gray-500 text-xs mt-1">
-                    Press <kbd className="bg-gray-800 px-1 rounded">{tool.shortcut}</kbd>
-                  </div>
-                )}
               </div>
             </button>
           ))}
@@ -191,34 +283,34 @@ const Toolbox = ({
       {/* HISTORY SECTION */}
       {(onUndo || onRedo) && (
         <>
-          <div className="mt-4 pt-3 border-t border-gray-700">
-            <div className="text-gray-400 text-xs font-semibold px-2 mb-2">
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
               HISTORY
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               {onUndo && (
                 <button
                   onClick={onUndo}
                   disabled={!canUndo}
                   className={`
-                    group relative flex items-center justify-center w-12 h-10 rounded-lg
+                    group relative flex items-center justify-center w-10 h-8 rounded
                     transition-all duration-200 z-10
                     ${
                       canUndo
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title="Undo"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
                     <path d="M3 7v6h6" />
                     <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" />
                   </svg>
                   
-                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
                        style={{ zIndex: 10000 }}>
-                    Undo <kbd className="bg-gray-800 px-1 rounded text-[10px]">Ctrl+Z</kbd>
+                    Undo
                   </div>
                 </button>
               )}
@@ -227,24 +319,24 @@ const Toolbox = ({
                   onClick={onRedo}
                   disabled={!canRedo}
                   className={`
-                    group relative flex items-center justify-center w-12 h-10 rounded-lg
+                    group relative flex items-center justify-center w-10 h-8 rounded
                     transition-all duration-200 z-10
                     ${
                       canRedo
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title="Redo"
                 >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
                     <path d="M21 7v6h-6" />
                     <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7" />
                   </svg>
                   
-                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
                        style={{ zIndex: 10000 }}>
-                    Redo <kbd className="bg-gray-800 px-1 rounded text-[10px]">Ctrl+Shift+Z</kbd>
+                    Redo
                   </div>
                 </button>
               )}
@@ -256,22 +348,22 @@ const Toolbox = ({
       {/* LAYERS SECTION */}
       {(onBringToFront || onSendToBack || onBringForward || onSendBackward) && (
         <>
-          <div className="mt-4 pt-3 border-t border-gray-700">
-            <div className="text-gray-400 text-xs font-semibold px-2 mb-2">
-              LAYERS {!layerControlsEnabled && <span className="text-gray-600 text-[10px] ml-1">(Select 1)</span>}
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
+              LAYERS {!layerControlsEnabled && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
             </div>
             
             {/* Layer position indicator */}
             {layerInfo && layerControlsEnabled && (
-              <div className="text-gray-400 text-xs px-2 mb-2">
-                Layer {layerInfo.current} of {layerInfo.total}
+              <div className="text-gray-400 text-[9px] px-1 mb-1">
+                Layer {layerInfo.current}/{layerInfo.total}
               </div>
             )}
             
             {/* New Layout: Single layer (↑,↓) on left, Multi-layer (↑↑,↓↓) on right */}
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-1">
               {/* LEFT COLUMN - Single layer moves */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1">
                 {/* Bring Forward */}
                 <button
                   onClick={onBringForward}
@@ -279,25 +371,22 @@ const Toolbox = ({
                   onMouseEnter={() => setTooltip('Forward')}
                   onMouseLeave={() => setTooltip(null)}
                   className={`
-                    group relative flex items-center justify-center h-9 rounded-lg
+                    group relative flex items-center justify-center h-7 rounded
                     transition-all duration-200 z-10
                     ${
                       layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title="Bring Forward"
                 >
-                  <div className="relative z-10 text-sm font-semibold">↑</div>
+                  <div className="relative z-10 text-xs font-semibold">↑</div>
                   
                   {tooltip === 'Forward' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                          style={{ zIndex: 10000 }}>
-                      <div>Bring Forward</div>
-                      <div className="text-gray-500 text-[10px] mt-0.5">
-                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+]</kbd>
-                      </div>
+                      Forward
                     </div>
                   )}
                 </button>
@@ -309,32 +398,29 @@ const Toolbox = ({
                   onMouseEnter={() => setTooltip('Backward')}
                   onMouseLeave={() => setTooltip(null)}
                   className={`
-                    group relative flex items-center justify-center h-9 rounded-lg
+                    group relative flex items-center justify-center h-7 rounded
                     transition-all duration-200 z-10
                     ${
                       layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title="Send Backward"
                 >
-                  <div className="relative z-10 text-sm font-semibold">↓</div>
+                  <div className="relative z-10 text-xs font-semibold">↓</div>
                   
                   {tooltip === 'Backward' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                          style={{ zIndex: 10000 }}>
-                      <div>Send Backward</div>
-                      <div className="text-gray-500 text-[10px] mt-0.5">
-                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+[</kbd>
-                      </div>
+                      Backward
                     </div>
                   )}
                 </button>
               </div>
 
               {/* RIGHT COLUMN - Front/Back moves */}
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1">
                 {/* Bring to Front */}
                 <button
                   onClick={onBringToFront}
@@ -342,25 +428,22 @@ const Toolbox = ({
                   onMouseEnter={() => setTooltip('To Front')}
                   onMouseLeave={() => setTooltip(null)}
                   className={`
-                    group relative flex items-center justify-center h-9 rounded-lg
+                    group relative flex items-center justify-center h-7 rounded
                     transition-all duration-200 z-10
                     ${
                       layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title="Bring to Front"
                 >
-                  <div className="relative z-10 text-sm font-semibold">↑↑</div>
+                  <div className="relative z-10 text-xs font-semibold">↑↑</div>
                   
                   {tooltip === 'To Front' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                          style={{ zIndex: 10000 }}>
-                      <div>Bring to Front</div>
-                      <div className="text-gray-500 text-[10px] mt-0.5">
-                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+]</kbd>
-                      </div>
+                      To Front
                     </div>
                   )}
                 </button>
@@ -372,25 +455,22 @@ const Toolbox = ({
                   onMouseEnter={() => setTooltip('To Back')}
                   onMouseLeave={() => setTooltip(null)}
                   className={`
-                    group relative flex items-center justify-center h-9 rounded-lg
+                    group relative flex items-center justify-center h-7 rounded
                     transition-all duration-200 z-10
                     ${
                       layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title="Send to Back"
                 >
-                  <div className="relative z-10 text-sm font-semibold">↓↓</div>
+                  <div className="relative z-10 text-xs font-semibold">↓↓</div>
                   
                   {tooltip === 'To Back' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                          style={{ zIndex: 10000 }}>
-                      <div>Send to Back</div>
-                      <div className="text-gray-500 text-[10px] mt-0.5">
-                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+[</kbd>
-                      </div>
+                      To Back
                     </div>
                   )}
                 </button>
@@ -403,11 +483,11 @@ const Toolbox = ({
       {/* ALIGNMENT SECTION */}
       {(onAlign || onDistribute) && (
         <>
-          <div className="mt-4 pt-3 border-t border-gray-700">
-            <div className="text-gray-400 text-xs font-semibold px-2 mb-2">
-              ALIGN {!alignmentEnabled && <span className="text-gray-600 text-[10px] ml-1">(Select 2+)</span>}
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
+              ALIGN {!alignmentEnabled && <span className="text-gray-600 text-[9px] ml-1">(2+)</span>}
             </div>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-3 gap-1">
               {alignmentButtons.slice(0, 6).map((button) => (
                 <button
                   key={button.id}
@@ -416,53 +496,22 @@ const Toolbox = ({
                   onMouseEnter={() => setTooltip(button.label)}
                   onMouseLeave={() => setTooltip(null)}
                   className={`
-                    group relative flex items-center justify-center h-9 rounded-lg
+                    group relative flex items-center justify-center h-7 rounded
                     transition-all duration-200 z-10
                     ${
                       alignmentEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title={button.label}
                 >
-                  <div className="relative z-10">{button.icon}</div>
+                  <div className="relative z-10 scale-75">{button.icon}</div>
                   
                   {tooltip === button.label && alignmentEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                          style={{ zIndex: 10000 }}>
-                      <div>{button.label}</div>
-                      {/* Show keyboard shortcuts for alignments */}
-                      {button.id === 'left' && (
-                        <div className="text-gray-500 text-[10px] mt-0.5">
-                          <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+L</kbd>
-                        </div>
-                      )}
-                      {button.id === 'right' && (
-                        <div className="text-gray-500 text-[10px] mt-0.5">
-                          <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+R</kbd>
-                        </div>
-                      )}
-                      {button.id === 'top' && (
-                        <div className="text-gray-500 text-[10px] mt-0.5">
-                          <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+T</kbd>
-                        </div>
-                      )}
-                      {button.id === 'bottom' && (
-                        <div className="text-gray-500 text-[10px] mt-0.5">
-                          <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+B</kbd>
-                        </div>
-                      )}
-                      {button.id === 'center-h' && (
-                        <div className="text-gray-500 text-[10px] mt-0.5">
-                          <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+H</kbd>
-                        </div>
-                      )}
-                      {button.id === 'center-v' && (
-                        <div className="text-gray-500 text-[10px] mt-0.5">
-                          <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+V</kbd>
-                        </div>
-                      )}
+                      {button.label}
                     </div>
                   )}
                 </button>
@@ -470,10 +519,10 @@ const Toolbox = ({
             </div>
 
             {/* Distribute section */}
-            <div className="text-gray-400 text-xs font-semibold px-2 mt-3 mb-2">
-              DISTRIBUTE {!alignmentEnabled && <span className="text-gray-600 text-[10px] ml-1">(Select 2+)</span>}
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mt-2 mb-1">
+              DISTRIBUTE {!alignmentEnabled && <span className="text-gray-600 text-[9px] ml-1">(2+)</span>}
             </div>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-1">
               {alignmentButtons.slice(6).map((button) => (
                 <button
                   key={button.id}
@@ -482,20 +531,20 @@ const Toolbox = ({
                   onMouseEnter={() => setTooltip(button.label)}
                   onMouseLeave={() => setTooltip(null)}
                   className={`
-                    group relative flex items-center justify-center h-9 rounded-lg
+                    group relative flex items-center justify-center h-7 rounded
                     transition-all duration-200 z-10
                     ${
                       alignmentEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
                   title={button.label}
                 >
-                  <div className="relative z-10">{button.icon}</div>
+                  <div className="relative z-10 scale-75">{button.icon}</div>
                   
                   {tooltip === button.label && alignmentEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                          style={{ zIndex: 10000 }}>
                       {button.label}
                     </div>
@@ -510,27 +559,28 @@ const Toolbox = ({
       {/* CLEAR CANVAS BUTTON - At Bottom */}
       {onClearCanvas && (
         <>
-          <div className="mt-4 pt-3 border-t border-gray-700">
+          <div className="mt-2 pt-2 border-t border-gray-700">
             <button
               onClick={onClearCanvas}
               onMouseEnter={() => setTooltip('Clear Canvas')}
               onMouseLeave={() => setTooltip(null)}
-              className="relative w-full px-3 py-2 text-sm font-semibold text-red-400 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-all duration-200 z-10 flex items-center justify-center gap-2"
+              className="relative w-full px-2 py-1.5 text-xs font-semibold text-red-400 bg-red-900/20 hover:bg-red-900/40 rounded transition-all duration-200 z-10 flex items-center justify-center gap-1.5"
               title="Clear Canvas"
             >
-              <span>🗑️</span>
-              <span>Clear Canvas</span>
+              <span className="text-sm">🗑️</span>
+              <span>Clear</span>
               
               {tooltip === 'Clear Canvas' && (
-                <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
                      style={{ zIndex: 10000 }}>
-                  Delete all shapes
+                  Clear All
                 </div>
               )}
             </button>
           </div>
         </>
       )}
+      </div>
     </div>
   );
 };

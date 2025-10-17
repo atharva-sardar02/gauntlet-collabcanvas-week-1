@@ -37,9 +37,10 @@ import type { ToolType } from '../../utils/tools';
 
 interface CanvasProps {
   onExportRequest?: (handler: () => void, hasShapes: boolean) => void;
+  isToolboxVisible?: boolean;
 }
 
-const Canvas = ({ onExportRequest }: CanvasProps) => {
+const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   const context = useContext(CanvasContext);
   
   if (!context) {
@@ -1385,6 +1386,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         onDistribute={handleDistribute}
         alignmentEnabled={selectedIds.length >= 2}
         onBringToFront={handleBringToFront}
+        isVisible={isToolboxVisible}
         onSendToBack={handleSendToBack}
         onBringForward={handleBringForward}
         onSendBackward={handleSendBackward}

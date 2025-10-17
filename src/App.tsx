@@ -19,6 +19,11 @@ const AuthenticatedApp = () => {
   const { currentUser } = useAuth();
   const [exportHandler, setExportHandler] = useState<(() => void) | null>(null);
   const [hasShapes, setHasShapes] = useState(false);
+  const [isToolboxVisible, setIsToolboxVisible] = useState(() => {
+    // Load from localStorage, default to true
+    const saved = localStorage.getItem('toolbox-visible');
+    return saved ? JSON.parse(saved) : true;
+  });
 
   // Callback to receive export handler from Canvas
   const handleExportRequest = (handler: () => void, hasShapesValue: boolean) => {
@@ -26,14 +31,31 @@ const AuthenticatedApp = () => {
     setHasShapes(hasShapesValue);
   };
 
+  // Toggle toolbox and save to localStorage
+  const toggleToolbox = () => {
+    setIsToolboxVisible((prev: boolean) => {
+      const newValue = !prev;
+      localStorage.setItem('toolbox-visible', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
+
   return (
     <HistoryProvider userId={currentUser?.uid || null}>
       <CanvasProvider>
         <AIAgentProvider>
           <div className="min-h-screen bg-gray-900 flex flex-col">
-            <Navbar onExport={exportHandler || undefined} hasShapes={hasShapes} />
+            <Navbar 
+              onExport={exportHandler || undefined} 
+              hasShapes={hasShapes}
+              isToolboxVisible={isToolboxVisible}
+              onToggleToolbox={toggleToolbox}
+            />
             <div className="flex-1 overflow-hidden">
-              <Canvas onExportRequest={handleExportRequest} />
+              <Canvas 
+                onExportRequest={handleExportRequest}
+                isToolboxVisible={isToolboxVisible}
+              />
             </div>
           </div>
           <CommandBar />
