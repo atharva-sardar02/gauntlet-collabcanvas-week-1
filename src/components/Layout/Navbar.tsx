@@ -1,4 +1,5 @@
 import { useAuth } from '../../hooks/useAuth';
+import { useAIAgent } from '../../contexts/AIAgentContext';
 
 interface NavbarProps {
   onExport?: () => void;
@@ -7,6 +8,7 @@ interface NavbarProps {
 
 const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
   const { currentUser, logout } = useAuth();
+  const { openCommandBar } = useAIAgent();
 
   const handleLogout = async () => {
     try {
@@ -33,6 +35,31 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
           {/* User Info & Actions */}
           {currentUser && (
             <div className="flex items-center gap-4">
+              {/* AI Command Button */}
+              <button
+                onClick={openCommandBar}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-purple-500/50 hover:scale-105"
+                title="AI Commands (Ctrl+/ or Cmd+/)"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+                <span className="hidden sm:inline">AI Agent</span>
+                <kbd className="hidden md:inline-block px-2 py-0.5 text-xs font-semibold bg-white/20 rounded border border-white/30">
+                  Ctrl+/
+                </kbd>
+              </button>
+
               {/* Export Button */}
               {onExport && (
                 <button

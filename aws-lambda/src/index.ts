@@ -170,13 +170,13 @@ export const handler = async (
     }
 
     // ============================================
-    // Step 7: Execute AI command
+    // Step 7: Execute AI command with agent loop
     // ============================================
     const aiStartTime = Date.now();
-    let toolCalls;
+    let agentResponse;
     
     try {
-      toolCalls = await executeAICommand(command, canvasState || {}, openaiApiKey);
+      agentResponse = await executeAICommand(command, canvasState || {}, openaiApiKey);
     } catch (error: any) {
       console.error('AI command execution failed:', error.message);
       return {
@@ -190,14 +190,19 @@ export const handler = async (
     }
 
     const aiLatency = Date.now() - aiStartTime;
-    console.log(`AI command completed in ${aiLatency}ms`);
-    console.log(`Generated ${toolCalls.length} tool calls`);
+    console.log(`AI agent completed in ${aiLatency}ms`);
+    console.log(`Generated ${agentResponse.toolCalls.length} tool calls in batch ${agentResponse.batchNumber}`);
+    console.log(`Has more: ${agentResponse.hasMore}`);
 
     // ============================================
     // Step 8: Cache result for idempotency
     // ============================================
     const result = {
-      toolCalls,
+      toolCalls: agentResponse.toolCalls,
+      totalOperations: agentResponse.totalOperations,
+      batchNumber: agentResponse.batchNumber,
+      hasMore: agentResponse.hasMore,
+      message: agentResponse.message,
       latency: aiLatency,
       timestamp: Date.now(),
     };
@@ -212,7 +217,7 @@ export const handler = async (
     console.log('=== Request Summary ===');
     console.log('User:', user.uid);
     console.log('Command:', command.substring(0, 100));
-    console.log('Tool calls:', toolCalls.length);
+    console.log('Tool calls:', agentResponse.toolCalls.length);
     console.log('AI latency:', aiLatency, 'ms');
     console.log('Total latency:', totalLatency, 'ms');
     console.log('Remaining requests:', getRemainingRequests(user.uid));

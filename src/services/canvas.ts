@@ -99,6 +99,69 @@ export const getShapes = async (): Promise<Shape[]> => {
 };
 
 /**
+ * Bulk create multiple shapes in a single Firestore transaction
+ * Much more efficient than calling createShape multiple times
+ * @param shapesData - Array of shape data to create
+ * @param userId - ID of user creating the shapes
+ * @param userName - Name of user creating the shapes
+ * @returns Array of created shape IDs
+ */
+export const bulkCreateShapes = async (
+  shapesData: Array<Omit<Shape, 'id'>>,
+  userId: string,
+  userName?: string
+): Promise<string[]> => {
+  try {
+    const canvasRef = doc(db, 'canvas', CANVAS_ID);
+    const snapshot = await getDoc(canvasRef);
+
+    const existingShapes = snapshot.exists() ? snapshot.data().shapes || [] : [];
+    const now = Date.now();
+    
+    // Calculate starting zIndex
+    const maxZIndex = existingShapes.length > 0 
+      ? Math.max(...existingShapes.map((s: Shape) => s.zIndex || 0), 0)
+      : 0;
+    
+    // Create all new shapes with metadata
+    const newShapes: Shape[] = shapesData.map((shapeData, index) => {
+      const shapeId = `shape-${now + index}-${Math.random().toString(36).substr(2, 9)}`;
+      const editSessionId = `session-${userId}-${now + index}`;
+      
+      return {
+        id: shapeId,
+        ...shapeData,
+        createdAt: now + index,
+        lastModifiedAt: now + index,
+        lastModifiedTimestamp: now + index,
+        createdBy: userId,
+        lastModifiedBy: userId,
+        createdByName: userName || 'User',
+        lastModifiedByName: userName || 'User',
+        zIndex: maxZIndex + index + 1,
+        version: 1,
+        isLocked: false,
+        lockedBy: null,
+        lockedByColor: null,
+        editSessionId,
+      } as Shape;
+    });
+
+    // Single write with all shapes
+    await updateDoc(canvasRef, {
+      shapes: [...existingShapes, ...newShapes],
+      lastUpdated: serverTimestamp(),
+    });
+
+    console.log(`✅ Bulk created ${newShapes.length} shapes in Firestore`);
+    return newShapes.map(s => s.id);
+  } catch (error) {
+    console.error('Error bulk creating shapes:', error);
+    throw error;
+  }
+};
+
+/**
  * Create a new shape in Firestore
  * @param shapeData - Shape data to create
  * @param userId - ID of user creating the shape

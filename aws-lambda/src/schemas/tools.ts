@@ -80,6 +80,48 @@ export const exportSchema = z.object({
   pixelRatio: z.number().optional().default(1).describe('Pixel ratio (1x, 2x, 3x)'),
 });
 
+// 11. Bulk Create Shapes - Efficiently create many shapes in a pattern
+export const bulkCreateShapesSchema = z.object({
+  pattern: z.enum(['grid', 'row', 'column', 'circle', 'spiral']).describe('Layout pattern for shapes'),
+  shape: z.enum(['rectangle', 'circle', 'ellipse', 'triangle', 'star']).describe('Shape type'),
+  count: z.number().positive().max(1000).describe('Number of shapes to create (max 1000)'),
+  style: z.object({
+    fill: z.string().optional().default('#3B82F6').describe('Fill color (hex)'),
+    stroke: z.string().optional().describe('Stroke color (hex)'),
+    width: z.number().positive().optional().default(50).describe('Shape width'),
+    height: z.number().positive().optional().default(50).describe('Shape height'),
+  }).optional().default({}),
+  layout: z.object({
+    rows: z.number().positive().optional().describe('Number of rows (for grid pattern)'),
+    cols: z.number().positive().optional().describe('Number of columns (for grid pattern)'),
+    spacing: z.number().optional().default(10).describe('Spacing between shapes in pixels'),
+    origin: z.object({
+      x: z.number().default(100),
+      y: z.number().default(100),
+    }).optional().default({ x: 100, y: 100 }).describe('Starting position'),
+    radius: z.number().positive().optional().describe('Radius for circle/spiral pattern'),
+  }).optional().default({}),
+});
+
+// 12. Create Complex Layout - Create complex UI components
+export const createComplexLayoutSchema = z.object({
+  type: z.enum(['login_form', 'navbar', 'card', 'button_group', 'form', 'dashboard']).describe('Type of complex layout'),
+  config: z.object({
+    title: z.string().optional().describe('Title or heading text'),
+    items: z.array(z.string()).optional().describe('List of items (menu items, buttons, etc.)'),
+    fields: z.array(z.string()).optional().describe('Form field labels'),
+    style: z.object({
+      primaryColor: z.string().optional().default('#3B82F6'),
+      backgroundColor: z.string().optional().default('#FFFFFF'),
+      textColor: z.string().optional().default('#000000'),
+    }).optional().default({}),
+  }).optional().default({}),
+  position: z.object({
+    x: z.number().default(100),
+    y: z.number().default(100),
+  }).optional().default({ x: 100, y: 100 }).describe('Position of the layout'),
+});
+
 // Export all schemas
 export const toolSchemas = {
   createShape: createShapeSchema,
@@ -92,6 +134,8 @@ export const toolSchemas = {
   makeComponent: makeComponentSchema,
   instantiateComponent: instantiateComponentSchema,
   export: exportSchema,
+  bulkCreateShapes: bulkCreateShapesSchema,
+  createComplexLayout: createComplexLayoutSchema,
 };
 
 // Type exports for TypeScript
@@ -105,5 +149,7 @@ export type CreateTextArgs = z.infer<typeof createTextSchema>;
 export type MakeComponentArgs = z.infer<typeof makeComponentSchema>;
 export type InstantiateComponentArgs = z.infer<typeof instantiateComponentSchema>;
 export type ExportArgs = z.infer<typeof exportSchema>;
+export type BulkCreateShapesArgs = z.infer<typeof bulkCreateShapesSchema>;
+export type CreateComplexLayoutArgs = z.infer<typeof createComplexLayoutSchema>;
 
 

@@ -17,6 +17,10 @@ export interface ToolCall {
 
 export interface AICommandResponse {
   toolCalls: ToolCall[];
+  totalOperations: number;
+  batchNumber: number;
+  hasMore: boolean;
+  message?: string;
   latency: number;
   timestamp: number;
   cached?: boolean;
@@ -196,6 +200,68 @@ export async function executeToolCalls(
         case 'export':
           // TODO: Trigger export functionality
           console.log('Export requested:', args.scope, args.format);
+          break;
+
+        case 'bulkCreateShapes':
+          // Efficiently create many shapes from pre-computed coordinates
+          console.log(`Bulk creating ${args.count} shapes...`);
+          
+          const bulkShapesData = args.shapes.map((shape: any) => {
+            const shapeData: any = {
+              type: shape.type,
+              x: shape.x,
+              y: shape.y,
+              width: shape.width,
+              height: shape.height,
+              fill: shape.fill || '#3B82F6',
+            };
+            if (shape.stroke) {
+              shapeData.stroke = shape.stroke;
+            }
+            if (shape.rotation) {
+              shapeData.rotation = shape.rotation;
+            }
+            return shapeData;
+          });
+          
+          // Single Firestore write for all shapes
+          await canvasContext.bulkAddShapes(bulkShapesData);
+          
+          console.log(`✅ Bulk created ${args.count} shapes in Firestore`);
+          break;
+
+        case 'createComplexLayout':
+          // Create complex layout from pre-computed elements
+          console.log(`Creating ${args.type} layout with ${args.count} elements...`);
+          
+          const layoutShapesData = args.shapes.map((shape: any) => {
+            const shapeData: any = {
+              type: shape.type,
+              x: shape.x,
+              y: shape.y,
+              width: shape.width,
+              height: shape.height,
+              fill: shape.fill || '#3B82F6',
+            };
+            
+            // Add text-specific properties
+            if (shape.text) {
+              shapeData.text = shape.text;
+              shapeData.fontSize = shape.fontSize || 16;
+            }
+            
+            // Add stroke if defined
+            if (shape.stroke) {
+              shapeData.stroke = shape.stroke;
+            }
+            
+            return shapeData;
+          });
+          
+          // Single Firestore write for all shapes
+          await canvasContext.bulkAddShapes(layoutShapesData);
+          
+          console.log(`✅ Created ${args.type} layout with ${args.count} elements in Firestore`);
           break;
 
         default:

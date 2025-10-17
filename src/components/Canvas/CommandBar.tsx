@@ -23,6 +23,7 @@ export function CommandBar() {
     isProcessing,
     error,
     commandHistory,
+    progress,
   } = useAIAgent();
 
   const [input, setInput] = useState('');
@@ -139,6 +140,26 @@ export function CommandBar() {
           {error && (
             <div className="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Progress Display */}
+          {isProcessing && progress && (
+            <div className="mt-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-blue-900">
+                  Processing batch {progress.batchNumber}...
+                </span>
+                <span className="text-sm text-blue-700">
+                  {progress.current} operations
+                </span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min((progress.current / progress.total) * 100, 100)}%` }}
+                />
+              </div>
             </div>
           )}
 

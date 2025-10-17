@@ -56,6 +56,32 @@ export const useCanvas = () => {
   );
 
   /**
+   * Bulk add multiple shapes to the canvas in a single transaction
+   * Much more efficient than calling addShape multiple times
+   * Returns array of created shape IDs
+   */
+  const bulkAddShapes = useCallback(
+    async (shapesData: Array<Omit<Shape, 'id'>>): Promise<string[]> => {
+      if (!currentUser) {
+        setError('User not authenticated');
+        return [];
+      }
+
+      try {
+        setError(null);
+        const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+        const shapeIds = await canvasService.bulkCreateShapes(shapesData, currentUser.uid, userName);
+        return shapeIds;
+      } catch (err) {
+        console.error('Error bulk adding shapes:', err);
+        setError('Failed to create shapes');
+        return [];
+      }
+    },
+    [currentUser]
+  );
+
+  /**
    * Update an existing shape
    */
   const updateShape = useCallback(
@@ -158,6 +184,7 @@ export const useCanvas = () => {
     loading,
     error,
     addShape,
+    bulkAddShapes,
     updateShape,
     deleteShape,
     lockShape,

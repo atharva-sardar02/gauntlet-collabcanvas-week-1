@@ -67,6 +67,7 @@ export interface CanvasContextType {
   loading: boolean;
   error: string | null;
   addShape: (shape: Omit<Shape, 'id'>, skipHistory?: boolean) => Promise<void>;
+  bulkAddShapes: (shapes: Array<Omit<Shape, 'id'>>) => Promise<void>;
   updateShape: (id: string, updates: Partial<Shape>, skipHistory?: boolean) => Promise<void>;
   deleteShape: (id: string, skipHistory?: boolean) => Promise<void>;
   selectShape: (id: string | null) => void;
@@ -118,6 +119,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     loading,
     error,
     addShape: addShapeToFirebase,
+    bulkAddShapes: bulkAddShapesToFirebase,
     updateShape: updateShapeInFirebase,
     deleteShape: deleteShapeFromFirebase,
     lockShape: lockShapeInFirebase,
@@ -153,6 +155,20 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
       }
     },
     [addShapeToFirebase, currentUser]
+  );
+
+  /**
+   * Bulk add multiple shapes to the canvas
+   * Much more efficient than calling addShape multiple times
+   * Used by AI agent for bulk operations (500+ shapes)
+   */
+  const bulkAddShapes = useCallback(
+    async (shapesData: Array<Omit<Shape, 'id'>>) => {
+      await bulkAddShapesToFirebase(shapesData);
+      // Note: Skipping undo/redo tracking for bulk operations
+      // Too many operations would overwhelm the undo stack
+    },
+    [bulkAddShapesToFirebase]
   );
 
   /**
@@ -650,6 +666,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     loading,
     error,
     addShape,
+    bulkAddShapes,
     updateShape,
     deleteShape,
     selectShape,

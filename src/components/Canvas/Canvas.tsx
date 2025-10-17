@@ -720,6 +720,12 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
   // Handle spacebar panning (keep separate from keyboard shortcuts to avoid conflicts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle space if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       // Spacebar panning
       if (e.code === 'Space' && !spacePressed && !isDrawing) {
         e.preventDefault();
@@ -731,6 +737,12 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // Don't handle space if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
       if (e.code === 'Space') {
         e.preventDefault();
         setSpacePressed(false);
@@ -755,6 +767,38 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [spacePressed, isDrawing, selectedTool]);
+
+  // Handle AI Agent navigation to created shapes
+  useEffect(() => {
+    const handlePanToLocation = (e: Event) => {
+      const customEvent = e as CustomEvent<{ x: number; y: number }>;
+      const { x, y } = customEvent.detail;
+      
+      if (stageRef.current) {
+        const stage = stageRef.current;
+        
+        // Calculate position to center the target location in viewport
+        const newX = dimensions.width / 2 - x * scale;
+        const newY = dimensions.height / 2 - y * scale;
+        
+        // Animate pan to location
+        stage.to({
+          x: newX,
+          y: newY,
+          duration: 0.5,
+          easing: Konva.Easings.EaseInOut,
+        });
+        
+        console.log(`✨ Panned to (${Math.round(x)}, ${Math.round(y)})`);
+      }
+    };
+
+    window.addEventListener('panToLocation', handlePanToLocation);
+
+    return () => {
+      window.removeEventListener('panToLocation', handlePanToLocation);
+    };
+  }, [dimensions, scale]);
 
   // Calculate initial position to center the canvas
   const initialX = -CANVAS_CENTER_X + dimensions.width / 2;
