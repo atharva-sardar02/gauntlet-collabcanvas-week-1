@@ -14,6 +14,8 @@ export const createShapeSchema = z.object({
   height: z.number().positive().describe('Height in pixels'),
   fill: z.string().optional().default('#3B82F6').describe('Fill color (hex)'),
   stroke: z.string().optional().describe('Stroke color (hex)'),
+  opacity: z.number().min(0).max(1).optional().default(1).describe('Opacity from 0 (transparent) to 1 (opaque)'),
+  blendMode: z.enum(['source-over', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion']).optional().default('source-over').describe('Blend mode for visual effects'),
 });
 
 // 2. Move Shape - Move existing shape to new position
@@ -34,6 +36,15 @@ export const resizeShapeSchema = z.object({
 export const rotateShapeSchema = z.object({
   id: z.string().describe('Shape ID to rotate'),
   degrees: z.number().describe('Rotation angle in degrees'),
+});
+
+// 4a. Update Shape - Update shape properties (color, opacity, blend mode, etc.)
+export const updateShapeSchema = z.object({
+  id: z.string().describe('Shape ID to update'),
+  fill: z.string().optional().describe('Fill color (hex)'),
+  stroke: z.string().optional().describe('Stroke color (hex)'),
+  opacity: z.number().min(0).max(1).optional().describe('Opacity from 0 (transparent) to 1 (opaque)'),
+  blendMode: z.enum(['source-over', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion']).optional().describe('Blend mode for visual effects'),
 });
 
 // 5. Align Shapes - Align multiple shapes
@@ -90,6 +101,8 @@ export const bulkCreateShapesSchema = z.object({
     stroke: z.string().optional().describe('Stroke color (hex)'),
     width: z.number().positive().optional().default(50).describe('Shape width'),
     height: z.number().positive().optional().default(50).describe('Shape height'),
+    opacity: z.number().min(0).max(1).optional().default(1).describe('Opacity from 0 (transparent) to 1 (opaque)'),
+    blendMode: z.enum(['source-over', 'multiply', 'screen', 'overlay', 'darken', 'lighten']).optional().default('source-over').describe('Blend mode'),
   }).optional().default({}),
   layout: z.object({
     rows: z.number().positive().optional().describe('Number of rows (for grid pattern)'),
@@ -128,6 +141,7 @@ export const toolSchemas = {
   moveShape: moveShapeSchema,
   resizeShape: resizeShapeSchema,
   rotateShape: rotateShapeSchema,
+  updateShape: updateShapeSchema,
   align: alignSchema,
   distribute: distributeSchema,
   createText: createTextSchema,
@@ -143,6 +157,7 @@ export type CreateShapeArgs = z.infer<typeof createShapeSchema>;
 export type MoveShapeArgs = z.infer<typeof moveShapeSchema>;
 export type ResizeShapeArgs = z.infer<typeof resizeShapeSchema>;
 export type RotateShapeArgs = z.infer<typeof rotateShapeSchema>;
+export type UpdateShapeArgs = z.infer<typeof updateShapeSchema>;
 export type AlignArgs = z.infer<typeof alignSchema>;
 export type DistributeArgs = z.infer<typeof distributeSchema>;
 export type CreateTextArgs = z.infer<typeof createTextSchema>;

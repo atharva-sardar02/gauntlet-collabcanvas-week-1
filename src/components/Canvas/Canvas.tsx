@@ -1458,7 +1458,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
         </Layer>
       </Stage>
 
-      {/* Toolbox - includes drawing tools, history, alignment, and layers */}
+      {/* Toolbox - includes drawing tools, history, alignment, layers, and visual effects */}
       <Toolbox
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
@@ -1477,6 +1477,15 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
         layerControlsEnabled={selectedId !== null}
         layerInfo={selectedId ? getShapeLayerInfo(selectedId) : null}
         onClearCanvas={handleClearCanvas}
+        selectedShape={selectedId ? shapes.find(s => s.id === selectedId) || null : null}
+        selectedShapes={selectedIds.length > 0 ? shapes.filter(s => selectedIds.includes(s.id)) : []}
+        onUpdateShape={(updates) => {
+          // Apply updates to all selected shapes
+          const idsToUpdate = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+          idsToUpdate.forEach(id => {
+            updateShape(id, updates);
+          });
+        }}
       />
 
       {/* Canvas Controls */}

@@ -14,6 +14,8 @@ export interface ComputedShape {
   height: number;
   fill?: string;
   stroke?: string;
+  opacity?: number;
+  blendMode?: string;
   rotation?: number;
   text?: string;
   fontSize?: number;
@@ -30,6 +32,8 @@ export function executeBulkCreateShapes(args: BulkCreateShapesArgs): ComputedSha
   const shapeHeight = style?.height || 50;
   const fill = style?.fill || '#3B82F6';
   const stroke = style?.stroke;
+  const opacity = style?.opacity || 1;
+  const blendMode = style?.blendMode || 'source-over';
   const spacing = layout?.spacing || 10;
   const origin = layout?.origin || { x: 100, y: 100 };
 
@@ -50,6 +54,8 @@ export function executeBulkCreateShapes(args: BulkCreateShapesArgs): ComputedSha
             height: shapeHeight,
             fill,
             stroke,
+            opacity,
+            blendMode,
           });
           shapeIndex++;
         }
@@ -67,6 +73,8 @@ export function executeBulkCreateShapes(args: BulkCreateShapesArgs): ComputedSha
           height: shapeHeight,
           fill,
           stroke,
+          opacity,
+          blendMode,
         });
       }
       break;
@@ -82,6 +90,8 @@ export function executeBulkCreateShapes(args: BulkCreateShapesArgs): ComputedSha
           height: shapeHeight,
           fill,
           stroke,
+          opacity,
+          blendMode,
         });
       }
       break;
@@ -101,6 +111,8 @@ export function executeBulkCreateShapes(args: BulkCreateShapesArgs): ComputedSha
           height: shapeHeight,
           fill,
           stroke,
+          opacity,
+          blendMode,
         });
       }
       break;
@@ -121,6 +133,8 @@ export function executeBulkCreateShapes(args: BulkCreateShapesArgs): ComputedSha
           height: shapeHeight,
           fill,
           stroke,
+          opacity,
+          blendMode,
         });
       }
       break;

@@ -43,6 +43,9 @@ export interface Shape {
   rotation?: number;              // Rotation in degrees
   scaleX?: number;                // Horizontal scale
   scaleY?: number;                // Vertical scale
+  // Visual effects
+  opacity?: number;               // Opacity 0-1 (default: 1)
+  blendMode?: string;             // Konva globalCompositeOperation (default: 'source-over')
   // Metadata
   createdBy?: string;
   createdByName?: string;

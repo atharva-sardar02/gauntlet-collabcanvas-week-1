@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { TOOLS } from '../../utils/tools';
 import type { ToolType } from '../../utils/tools';
+import type { Shape } from '../../contexts/CanvasContext';
 
 interface ToolboxProps {
   selectedTool: ToolType;
@@ -23,6 +24,10 @@ interface ToolboxProps {
   layerInfo?: { current: number; total: number } | null;
   // Canvas actions
   onClearCanvas?: () => void;
+  // Visual effects
+  selectedShape?: Shape | null;
+  selectedShapes?: Shape[]; // For multi-select
+  onUpdateShape?: (updates: Partial<Shape>) => void;
   // Visibility control
   isVisible?: boolean;
 }
@@ -44,8 +49,14 @@ const Toolbox = ({
   layerControlsEnabled = false,
   layerInfo = null,
   onClearCanvas,
+  selectedShape = null,
+  selectedShapes = [],
+  onUpdateShape,
   isVisible = true,
 }: ToolboxProps) => {
+  // Determine if we're in multi-select mode
+  const isMultiSelect = selectedShapes && selectedShapes.length > 1;
+  const effectiveShape = isMultiSelect ? selectedShapes[0] : selectedShape; // Use first shape as reference for multi-select
   const tools = TOOLS;
   const [tooltip, setTooltip] = useState<string | null>(null);
   
@@ -220,14 +231,20 @@ const Toolbox = ({
   return (
     <div 
       ref={toolboxRef}
-      className="fixed bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-700 select-none" 
+      className={`fixed bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-2xl border border-gray-700 select-none ${effectiveShape ? 'toolbox-with-effects' : ''}`}
       style={{ 
         zIndex: 30,
         left: `${position.x}px`,
         top: `${position.y}px`,
         cursor: isDragging ? 'grabbing' : 'default',
         maxHeight: '90vh',
-        overflow: 'hidden',
+        overflowY: effectiveShape ? 'auto' : 'hidden', // Allow vertical scrolling only when Visual Effects are shown
+        overflowX: 'hidden', // Never allow horizontal scroll
+        // Custom scrollbar styling for dark theme (Firefox)
+        ...(effectiveShape && {
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#4B5563 #1F2937',
+        }),
       }}
     >
       {/* Drag Handle Header */}
@@ -244,7 +261,7 @@ const Toolbox = ({
         <div className="text-[9px] text-gray-500">Drag</div>
       </div>
 
-      <div className="p-2" style={{ overflow: 'hidden' }}>
+      <div className="p-2">
         {/* DRAWING TOOLS SECTION */}
         <div className="flex flex-col gap-1.5">
           <div className="text-gray-400 text-[10px] font-semibold px-1 mb-0.5">
@@ -551,6 +568,70 @@ const Toolbox = ({
                   )}
                 </button>
               ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* VISUAL EFFECTS SECTION */}
+      {effectiveShape && onUpdateShape && (
+        <>
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
+              VISUAL EFFECTS {isMultiSelect && <span className="text-gray-500 text-[9px] ml-1">({selectedShapes.length})</span>}
+            </div>
+            
+            {/* Opacity Slider */}
+            <div className="px-1 mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-gray-400">Opacity</label>
+                <span className="text-[10px] text-gray-300">
+                  {Math.round((effectiveShape.opacity || 1) * 100)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={Math.round((effectiveShape.opacity || 1) * 100)}
+                onChange={(e) => {
+                  const newOpacity = parseInt(e.target.value) / 100;
+                  onUpdateShape({ opacity: newOpacity });
+                }}
+                className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                style={{
+                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${Math.round((effectiveShape.opacity || 1) * 100)}%, #374151 ${Math.round((effectiveShape.opacity || 1) * 100)}%, #374151 100%)`,
+                }}
+              />
+            </div>
+            
+            {/* Blend Mode Dropdown */}
+            <div className="px-1">
+              <label className="text-[10px] text-gray-400 block mb-1">Blend Mode</label>
+              <select
+                value={effectiveShape.blendMode || 'source-over'}
+                onChange={(e) => {
+                  onUpdateShape({ blendMode: e.target.value });
+                }}
+                className="w-full px-2 py-1 text-[10px] bg-gray-700 text-gray-300 border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="source-over">Normal</option>
+                <option value="multiply">Multiply</option>
+                <option value="screen">Screen</option>
+                <option value="overlay">Overlay</option>
+                <option value="darken">Darken</option>
+                <option value="lighten">Lighten</option>
+                <option value="color-dodge">Color Dodge</option>
+                <option value="color-burn">Color Burn</option>
+                <option value="hard-light">Hard Light</option>
+                <option value="soft-light">Soft Light</option>
+                <option value="difference">Difference</option>
+                <option value="exclusion">Exclusion</option>
+                <option value="hue">Hue</option>
+                <option value="saturation">Saturation</option>
+                <option value="color">Color</option>
+                <option value="luminosity">Luminosity</option>
+              </select>
             </div>
           </div>
         </>

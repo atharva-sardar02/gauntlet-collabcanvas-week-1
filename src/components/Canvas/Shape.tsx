@@ -109,7 +109,10 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     // Hover effect: make shape translucent to see through it
     onMouseEnter: () => setIsHovered(true),
     onMouseLeave: () => setIsHovered(false),
-    opacity: isHovered ? 0.4 : 1, // 40% opacity when hovered, fully opaque otherwise
+    // Opacity: combine shape opacity with hover effect
+    opacity: isHovered ? (shape.opacity || 1) * 0.4 : (shape.opacity || 1),
+    // Blend mode: apply Konva's globalCompositeOperation
+    globalCompositeOperation: shape.blendMode || 'source-over',
     // Other shapes: solid border with glow
     // Text shapes: no border, no glow
     shadowBlur: isSelected && shape.type !== 'text' ? 5 : 0,
