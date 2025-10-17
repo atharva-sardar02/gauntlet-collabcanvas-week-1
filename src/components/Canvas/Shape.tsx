@@ -111,8 +111,8 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     onMouseLeave: () => setIsHovered(false),
     // Opacity: combine shape opacity with hover effect
     opacity: isHovered ? (shape.opacity || 1) * 0.4 : (shape.opacity || 1),
-    // Blend mode: apply Konva's globalCompositeOperation
-    globalCompositeOperation: shape.blendMode || 'source-over',
+    // Blend mode: apply Konva's globalCompositeOperation (cast to proper type)
+    globalCompositeOperation: (shape.blendMode || 'source-over') as GlobalCompositeOperation,
     // Other shapes: solid border with glow
     // Text shapes: no border, no glow
     shadowBlur: isSelected && shape.type !== 'text' ? 5 : 0,
