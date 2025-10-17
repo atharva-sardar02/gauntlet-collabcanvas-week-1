@@ -1,7 +1,8 @@
 import { useContext, useRef, useEffect } from 'react';
-import { Rect, Circle, Line, Text, Transformer, Star } from 'react-konva';
+import { Rect, Circle, Line, Text, Transformer, Star, Group, Label, Tag } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
+import { useAuth } from '../../hooks/useAuth';
 import type { Shape as ShapeType } from '../../contexts/CanvasContext';
 
 interface ShapeProps {
@@ -14,8 +15,34 @@ interface ShapeProps {
 
 const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: ShapeProps) => {
   const context = useContext(CanvasContext);
+  const { currentUser } = useAuth();
   const shapeRef = useRef<any>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+  
+  // Get user display name for the last editor
+  const getEditorName = () => {
+    if (!shape.lastModifiedBy) return null;
+    
+    // If it's the current user
+    if (currentUser && shape.lastModifiedBy === currentUser.uid) {
+      return 'You';
+    }
+    
+    // Use the stored name if available
+    if (shape.lastModifiedByName) {
+      return shape.lastModifiedByName;
+    }
+    
+    // Try to get name from lockedByName (if shape was locked)
+    if (shape.lockedByName && shape.lockedBy === shape.lastModifiedBy) {
+      return shape.lockedByName;
+    }
+    
+    // Fallback: show user ID (first 8 chars)
+    return shape.lastModifiedBy.substring(0, 8);
+  };
+  
+  const editorName = getEditorName();
 
   const handleDoubleClick = () => {
     if (shape.type === 'text') {
@@ -151,7 +178,37 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: Shape
 
   return (
     <>
-      {renderShape()}
+      <Group>
+        {renderShape()}
+        
+        {/* Show editor badge on hover or if recently edited (within 10 seconds) */}
+        {editorName && shape.lastModifiedAt && (Date.now() - shape.lastModifiedAt < 10000) && (
+          <Label
+            x={shape.x}
+            y={shape.y - 25}
+            opacity={0.9}
+          >
+            <Tag
+              fill="#1f2937"
+              pointerDirection="down"
+              pointerWidth={6}
+              pointerHeight={6}
+              lineJoin="round"
+              shadowColor="black"
+              shadowBlur={4}
+              shadowOpacity={0.3}
+            />
+            <Text
+              text={`✏️ ${editorName}`}
+              fontSize={11}
+              fontFamily="Arial"
+              fill="white"
+              padding={6}
+            />
+          </Label>
+        )}
+      </Group>
+      
       {isSelected && (
         <Transformer
           ref={transformerRef}

@@ -34,8 +34,10 @@ export interface Shape {
   radius?: number;
   // Metadata
   createdBy?: string;
+  createdByName?: string;
   createdAt?: number;
   lastModifiedBy?: string;
+  lastModifiedByName?: string;
   lastModifiedAt?: number;
   isLocked?: boolean;
   lockedBy?: string | null;

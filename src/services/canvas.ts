@@ -116,7 +116,8 @@ export const getShapes = async (): Promise<Shape[]> => {
  */
 export const createShape = async (
   shapeData: Omit<Shape, 'id'>,
-  userId: string
+  userId: string,
+  userName?: string
 ): Promise<string> => {  // Changed from Promise<void> to Promise<string> to return shape ID
   try {
     const canvasRef = doc(db, 'canvas', CANVAS_ID);
@@ -134,8 +135,10 @@ export const createShape = async (
       ...shapeData,
       id: shapeId,
       createdBy: userId,
+      createdByName: userName,
       createdAt: now,
       lastModifiedBy: userId,
+      lastModifiedByName: userName,
       lastModifiedAt: now,
       isLocked: false,
       lockedBy: null,
@@ -213,11 +216,13 @@ export const recreateShapeWithId = async (
  * @param shapeId - ID of shape to update
  * @param updates - Partial shape data to update
  * @param userId - ID of user updating the shape
+ * @param userName - Name of user updating the shape
  */
 export const updateShape = async (
   shapeId: string,
   updates: Partial<Shape>,
-  userId: string
+  userId: string,
+  userName?: string
 ): Promise<void> => {
   try {
     const canvasRef = doc(db, 'canvas', CANVAS_ID);
@@ -234,6 +239,7 @@ export const updateShape = async (
             ...shape,
             ...updates,
             lastModifiedBy: userId,
+            lastModifiedByName: userName,
             lastModifiedAt: now,
             // Increment version for conflict detection
             version: (shape.version || 0) + 1,

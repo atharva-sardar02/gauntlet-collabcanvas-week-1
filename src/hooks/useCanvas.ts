@@ -43,7 +43,8 @@ export const useCanvas = () => {
 
       try {
         setError(null);
-        const shapeId = await canvasService.createShape(shapeData, currentUser.uid);
+        const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+        const shapeId = await canvasService.createShape(shapeData, currentUser.uid, userName);
         return shapeId;
       } catch (err) {
         console.error('Error adding shape:', err);
@@ -66,7 +67,8 @@ export const useCanvas = () => {
 
       try {
         setError(null);
-        await canvasService.updateShape(shapeId, updates, currentUser.uid);
+        const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+        await canvasService.updateShape(shapeId, updates, currentUser.uid, userName);
       } catch (err) {
         console.error('Error updating shape:', err);
         setError('Failed to update shape');
