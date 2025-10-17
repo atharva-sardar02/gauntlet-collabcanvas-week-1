@@ -1127,6 +1127,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
     const shape = shapes.find(s => s.id === id);
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
+    const rotation = node.rotation(); // Get rotation in degrees
 
     // Reset scale and apply to width/height
     node.scaleX(1);
@@ -1149,6 +1150,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
       y: newY,
       width: newWidth,
       height: newHeight,
+      rotation, // Save rotation to Firestore
     });
   }, [updateShape, shapes]);
 

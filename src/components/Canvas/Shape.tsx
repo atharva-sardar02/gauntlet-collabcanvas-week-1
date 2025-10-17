@@ -86,6 +86,7 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     id: shape.id,
     x: shape.x,
     y: shape.y,
+    rotation: shape.rotation || 0, // Apply rotation from Firestore
     // Text: yellow when selected, white when not selected
     // Other shapes: keep their fill color
     fill: shape.type === 'text' 

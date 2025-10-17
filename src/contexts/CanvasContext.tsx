@@ -39,6 +39,10 @@ export interface Shape {
   textDecoration?: string; // 'underline' | ''
   // Circle-specific (uses width as diameter)
   radius?: number;
+  // Transform properties
+  rotation?: number;              // Rotation in degrees
+  scaleX?: number;                // Horizontal scale
+  scaleY?: number;                // Vertical scale
   // Metadata
   createdBy?: string;
   createdByName?: string;
