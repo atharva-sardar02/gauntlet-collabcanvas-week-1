@@ -1,4 +1,4 @@
-import { useContext, useRef, useEffect } from 'react';
+import { useContext, useRef, useEffect, useState } from 'react';
 import { Rect, Circle, Line, Text, Transformer, Star, Group, Label, Tag } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
@@ -19,6 +19,7 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
   const { currentUser } = useAuth();
   const shapeRef = useRef<any>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
+  const [isHovered, setIsHovered] = useState(false);
   
   // Get user display name for the last editor
   const getEditorName = () => {
@@ -101,6 +102,10 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     onDragEnd: handleDragEnd,
     onTransformEnd: handleTransformEnd,
     onContextMenu: onContextMenu,
+    // Hover effect: make shape translucent to see through it
+    onMouseEnter: () => setIsHovered(true),
+    onMouseLeave: () => setIsHovered(false),
+    opacity: isHovered ? 0.4 : 1, // 40% opacity when hovered, fully opaque otherwise
     // Other shapes: solid border with glow
     // Text shapes: no border, no glow
     shadowBlur: isSelected && shape.type !== 'text' ? 5 : 0,
