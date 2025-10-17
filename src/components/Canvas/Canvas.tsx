@@ -6,7 +6,6 @@ import CanvasControls from './CanvasControls';
 import Toolbox from './Toolbox';
 import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
-import PresenceList from '../Collaboration/PresenceList';
 import ShortcutToast, { type ToastMessage } from '../UI/ShortcutToast';
 import HistoryManager from './HistoryManager';
 import TextEditor from './TextEditor';
@@ -1433,12 +1432,6 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
           />
         );
       })}
-
-      {/* Presence List */}
-      <PresenceList 
-        users={onlineUsers} 
-        currentUserId={currentUser?.uid}
-      />
 
       {/* Toast Notifications */}
       <ShortcutToast

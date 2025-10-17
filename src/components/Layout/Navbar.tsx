@@ -1,5 +1,7 @@
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAIAgent } from '../../contexts/AIAgentContext';
+import { usePresence } from '../../hooks/usePresence';
 
 interface NavbarProps {
   onExport?: () => void;
@@ -9,6 +11,9 @@ interface NavbarProps {
 const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
   const { currentUser, logout } = useAuth();
   const { openCommandBar } = useAIAgent();
+  const { onlineUsers } = usePresence();
+  const [showUsersDropdown, setShowUsersDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     try {
@@ -17,6 +22,23 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
       console.error('Failed to logout:', error);
     }
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowUsersDropdown(false);
+      }
+    };
+
+    if (showUsersDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUsersDropdown]);
 
   return (
     <nav className="bg-gray-900 shadow-xl border-b border-gray-800">
@@ -84,6 +106,84 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
                   <span className="hidden sm:inline">Export</span>
                 </button>
               )}
+
+              {/* Online Users Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setShowUsersDropdown(!showUsersDropdown)}
+                  className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-gray-500/30 hover:scale-105 border border-gray-700"
+                  title="View online users"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">
+                    {onlineUsers.length} {onlineUsers.length === 1 ? 'user' : 'users'} online
+                  </span>
+                  <span className="sm:hidden">
+                    {onlineUsers.length}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${showUsersDropdown ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+
+                {/* Dropdown */}
+                {showUsersDropdown && (
+                  <div className="absolute right-0 mt-2 w-64 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 py-2 z-50 max-h-96 overflow-y-auto">
+                    <div className="px-4 py-2 border-b border-gray-700">
+                      <p className="text-sm font-semibold text-gray-300">
+                        Online Users ({onlineUsers.length})
+                      </p>
+                    </div>
+                    <div className="py-1">
+                      {onlineUsers.length === 0 ? (
+                        <div className="px-4 py-3 text-sm text-gray-400">
+                          No other users online
+                        </div>
+                      ) : (
+                        onlineUsers.map((user) => (
+                          <div
+                            key={user.userId}
+                            className="px-4 py-2 hover:bg-gray-700 transition-colors flex items-center gap-3"
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: user.cursorColor }}
+                            />
+                            <span className="text-sm text-gray-200">
+                              {user.displayName}
+                              {user.userId === currentUser?.uid && (
+                                <span className="text-xs text-gray-400 ml-2">(You)</span>
+                              )}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* User Display Name */}
               <div className="flex items-center gap-3">
