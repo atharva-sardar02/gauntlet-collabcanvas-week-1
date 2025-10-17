@@ -1,4 +1,4 @@
-import { useEffect, useContext, useCallback } from 'react';
+import { useEffect, useContext, useCallback, useRef } from 'react';
 import { useHistory } from '../../hooks/useHistory';
 import { useAuth } from '../../hooks/useAuth';
 import CanvasContext from '../../contexts/CanvasContext';
@@ -13,6 +13,7 @@ const HistoryManager = () => {
   const history = useHistory();
   const { currentUser } = useAuth();
   const canvasContext = useContext(CanvasContext);
+  const isPerformingRedoRef = useRef(false);
 
   if (!canvasContext) {
     throw new Error('HistoryManager must be used within CanvasProvider');
@@ -117,7 +118,17 @@ const HistoryManager = () => {
         case 'delete':
           // Redo delete by deleting the shape again
           if (operation.shapeIds[0]) {
-            await deleteShape(operation.shapeIds[0], true); // skipHistory = true
+            const shapeId = operation.shapeIds[0];
+            console.log('Redo delete: Looking for shape', shapeId, 'in', shapes.length, 'shapes');
+            const shapeExists = shapes.find(s => s.id === shapeId);
+            if (!shapeExists) {
+              console.error('Cannot redo delete: shape not found', shapeId);
+              console.log('Available shapes:', shapes.map(s => s.id));
+              return false;
+            }
+            console.log('Redo delete: Found shape, now deleting', shapeId);
+            await deleteShape(shapeId, true); // skipHistory = true
+            console.log('Redo delete: Shape deleted successfully', shapeId);
           }
           break;
 
@@ -167,7 +178,8 @@ const HistoryManager = () => {
       setOperationCallback((operation: Operation) => {
         // Only track operations by current user
         if (operation.userId === currentUser.uid) {
-          history.pushOperation(operation);
+          // If we're performing a redo, don't clear the redo stack
+          history.pushOperation(operation, isPerformingRedoRef.current);
         }
       });
     }
@@ -195,12 +207,27 @@ const HistoryManager = () => {
       redo: async () => {
         const operation = history.redo();
         if (operation) {
-          const success = await performRedo(operation);
-          if (!success) {
-            // If redo failed, we can't easily recover
-            console.warn('Redo operation failed');
+          // Set flag to indicate we're performing a redo
+          isPerformingRedoRef.current = true;
+          
+          try {
+            const success = await performRedo(operation);
+            isPerformingRedoRef.current = false;
+            
+            if (!success) {
+              // If redo failed, move operation back to redo stack
+              console.warn('Redo operation failed, moving back to redo stack');
+              // Remove from undo stack and add back to redo stack
+              history.undo(); // This will move it back to redo stack
+            }
+            return success;
+          } catch (error) {
+            isPerformingRedoRef.current = false;
+            console.error('Error during redo:', error);
+            // Move operation back to redo stack
+            history.undo();
+            return false;
           }
-          return success;
         }
         return false;
       },

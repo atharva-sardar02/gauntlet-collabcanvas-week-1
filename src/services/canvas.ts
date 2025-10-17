@@ -117,7 +117,7 @@ export const getShapes = async (): Promise<Shape[]> => {
 export const createShape = async (
   shapeData: Omit<Shape, 'id'>,
   userId: string
-): Promise<void> => {
+): Promise<string> => {  // Changed from Promise<void> to Promise<string> to return shape ID
   try {
     const canvasRef = doc(db, 'canvas', CANVAS_ID);
     const snapshot = await getDoc(canvasRef);
@@ -129,9 +129,10 @@ export const createShape = async (
     // Generate unique ID (prevents collisions even with simultaneous creates)
     // Format: shape-{timestamp}-{random9chars}
     // Collision probability: ~1 in 10^15 even at same millisecond
+    const shapeId = `shape-${now}-${Math.random().toString(36).substr(2, 9)}`;
     const newShape: Shape = {
       ...shapeData,
-      id: `shape-${now}-${Math.random().toString(36).substr(2, 9)}`,
+      id: shapeId,
       createdBy: userId,
       createdAt: now,
       lastModifiedBy: userId,
@@ -153,8 +154,56 @@ export const createShape = async (
       },
       { merge: true }
     );
+    
+    return shapeId;  // Return the generated shape ID
   } catch (error) {
     console.error('Error creating shape:', error);
+    throw error;
+  }
+};
+
+/**
+ * Recreate a shape with its original ID (for undo operations)
+ * @param shape - Complete shape data including original ID
+ * @param userId - ID of user recreating the shape
+ */
+export const recreateShapeWithId = async (
+  shape: Shape,
+  userId: string
+): Promise<void> => {
+  try {
+    const canvasRef = doc(db, 'canvas', CANVAS_ID);
+    const snapshot = await getDoc(canvasRef);
+
+    const shapes = snapshot.exists() ? snapshot.data().shapes || [] : [];
+
+    const now = Date.now();
+    
+    // Use the existing shape ID and preserve all original data
+    const recreatedShape: Shape = {
+      ...shape,
+      // Update metadata for recreation
+      lastModifiedBy: userId,
+      lastModifiedAt: now,
+      isLocked: false,
+      lockedBy: null,
+      lockedByColor: null,
+      // Increment version for conflict resolution
+      version: (shape.version || 0) + 1,
+      lastModifiedTimestamp: now,
+      editSessionId: `session-${userId}-${now}`,
+    };
+
+    await setDoc(
+      canvasRef,
+      {
+        shapes: [...shapes, recreatedShape],
+        lastUpdated: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    console.error('Error recreating shape:', error);
     throw error;
   }
 };

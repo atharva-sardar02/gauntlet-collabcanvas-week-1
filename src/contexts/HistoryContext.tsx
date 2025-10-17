@@ -3,9 +3,14 @@ import type { Operation } from '../types/operations';
 import { getOperationDescription } from '../types/operations';
 
 /**
- * Maximum number of operations to store in history
+ * Maximum number of operations to store in undo history
  */
 const MAX_HISTORY_SIZE = 50;
+
+/**
+ * Maximum number of operations in redo stack
+ */
+const MAX_REDO_SIZE = 50;
 
 /**
  * Local storage key for persisting history
@@ -17,7 +22,7 @@ export interface HistoryContextType {
   redoStack: Operation[];
   canUndo: boolean;
   canRedo: boolean;
-  pushOperation: (operation: Operation) => void;
+  pushOperation: (operation: Operation, skipRedoClear?: boolean) => void;
   undo: () => Operation | null;
   redo: () => Operation | null;
   clearHistory: () => void;
@@ -40,38 +45,21 @@ export const HistoryProvider = ({ children, userId }: HistoryProviderProps) => {
   const [undoStack, setUndoStack] = useState<Operation[]>([]);
   const [redoStack, setRedoStack] = useState<Operation[]>([]);
 
-  // Load history from localStorage on mount
+  // Clear history on mount (browser reload/refresh)
   useEffect(() => {
     if (!userId) return;
 
+    // Clear localStorage for this user
     try {
-      const stored = localStorage.getItem(`${HISTORY_STORAGE_KEY}-${userId}`);
-      if (stored) {
-        const { undoStack: savedUndo } = JSON.parse(stored);
-        // Only load recent operations (within last hour)
-        const oneHourAgo = Date.now() - 60 * 60 * 1000;
-        const recentOps = savedUndo.filter((op: Operation) => op.timestamp > oneHourAgo);
-        setUndoStack(recentOps.slice(-MAX_HISTORY_SIZE));
-      }
+      localStorage.removeItem(`${HISTORY_STORAGE_KEY}-${userId}`);
     } catch (error) {
-      console.error('Failed to load history from localStorage:', error);
+      console.error('Failed to clear history from localStorage:', error);
     }
+
+    // Ensure both stacks are empty on mount
+    setUndoStack([]);
+    setRedoStack([]);
   }, [userId]);
-
-  // Save history to localStorage on changes
-  useEffect(() => {
-    if (!userId || undoStack.length === 0) return;
-
-    try {
-      const toSave = {
-        undoStack: undoStack.slice(-MAX_HISTORY_SIZE),
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(`${HISTORY_STORAGE_KEY}-${userId}`, JSON.stringify(toSave));
-    } catch (error) {
-      console.error('Failed to save history to localStorage:', error);
-    }
-  }, [undoStack, userId]);
 
   /**
    * Check if user can undo
@@ -85,9 +73,11 @@ export const HistoryProvider = ({ children, userId }: HistoryProviderProps) => {
 
   /**
    * Push a new operation to the undo stack
-   * Clears redo stack when new operation is added
+   * Clears redo stack when new operation is added (unless skipRedoClear is true)
+   * @param operation - The operation to push
+   * @param skipRedoClear - If true, don't clear redo stack (used for redo operations)
    */
-  const pushOperation = useCallback((operation: Operation) => {
+  const pushOperation = useCallback((operation: Operation, skipRedoClear = false) => {
     setUndoStack((prev) => {
       const newStack = [...prev, operation];
       // Keep only last MAX_HISTORY_SIZE operations
@@ -97,13 +87,16 @@ export const HistoryProvider = ({ children, userId }: HistoryProviderProps) => {
       return newStack;
     });
     
-    // Clear redo stack when new operation is performed
-    setRedoStack([]);
+    // Clear redo stack when new operation is performed (except for redo operations)
+    if (!skipRedoClear) {
+      setRedoStack([]);
+    }
   }, []);
 
   /**
    * Undo the last operation
    * Only undoes operations by the current user
+   * Keeps last 5 operations in redo stack
    */
   const undo = useCallback((): Operation | null => {
     if (!canUndo || !userId) return null;
@@ -114,9 +107,16 @@ export const HistoryProvider = ({ children, userId }: HistoryProviderProps) => {
       if (undoStack[i].userId === userId) {
         const operation = undoStack[i];
         
-        // Move operation from undo to redo stack
+        // Move operation from undo to redo stack (limit to MAX_REDO_SIZE)
         setUndoStack((prev) => prev.slice(0, i).concat(prev.slice(i + 1)));
-        setRedoStack((prev) => [...prev, operation]);
+        setRedoStack((prev) => {
+          const newStack = [...prev, operation];
+          // Keep only last MAX_REDO_SIZE operations
+          if (newStack.length > MAX_REDO_SIZE) {
+            return newStack.slice(-MAX_REDO_SIZE);
+          }
+          return newStack;
+        });
         
         return operation;
       }

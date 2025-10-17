@@ -113,14 +113,16 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: Shape
         );
 
       case 'star':
+        // Star is centered, so we need to adjust position to match other shapes
+        const starRadius = Math.min(shape.width, shape.height) / 2;
         return (
           <Star
             {...commonProps}
+            x={shape.x + shape.width / 2}  // Center the star horizontally
+            y={shape.y + shape.height / 2}  // Center the star vertically
             numPoints={5}
-            innerRadius={(Math.min(shape.width, shape.height) / 2) * 0.5}
-            outerRadius={Math.min(shape.width, shape.height) / 2}
-            offsetX={-(shape.width / 2)}
-            offsetY={-(shape.height / 2)}
+            innerRadius={starRadius * 0.5}
+            outerRadius={starRadius}
           />
         );
 

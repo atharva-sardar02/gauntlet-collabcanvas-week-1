@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext, useCallback } from 'react';
-import { Stage, Layer, Rect, Line, Circle, Text } from 'react-konva';
+import { Stage, Layer, Rect, Line, Circle, Text, Star } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
@@ -8,7 +8,6 @@ import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
 import PresenceList from '../Collaboration/PresenceList';
 import ShortcutToast, { type ToastMessage } from '../UI/ShortcutToast';
-import HistoryButtons from './HistoryButtons';
 import HistoryManager from './HistoryManager';
 import TextEditor from './TextEditor';
 import ExportDialog, { type ExportScope, type PixelRatio } from './ExportDialog';
@@ -46,7 +45,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, loading, error, setStageRef, selectShape, addShape, updateShape, deleteShape, duplicateShape, nudgeShape } = context;
+  const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
@@ -141,6 +140,40 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       showToast('Selection cleared', 'info');
     }
   }, [selectedId, selectShape, showToast]);
+
+  /**
+   * Handle alignment actions
+   */
+  const handleAlign = useCallback(async (mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => {
+    if (selectedIds.length < 2) {
+      showToast('Select 2+ shapes to align', 'error');
+      return;
+    }
+
+    await alignShapes(selectedIds, mode);
+    const modeLabel = {
+      'left': 'left',
+      'right': 'right',
+      'top': 'top',
+      'bottom': 'bottom',
+      'center-h': 'center horizontal',
+      'center-v': 'center vertical',
+    }[mode];
+    showToast(`Aligned ${selectedIds.length} shapes ${modeLabel}`, 'success');
+  }, [selectedIds, alignShapes, showToast]);
+
+  /**
+   * Handle distribution actions
+   */
+  const handleDistribute = useCallback(async (axis: 'horizontal' | 'vertical') => {
+    if (selectedIds.length < 3) {
+      showToast('Select 3+ shapes to distribute', 'error');
+      return;
+    }
+
+    await distributeShapes(selectedIds, axis);
+    showToast(`Distributed ${selectedIds.length} shapes ${axis}ly`, 'success');
+  }, [selectedIds, distributeShapes, showToast]);
 
   /**
    * Handle arrow key nudging with repeat
@@ -379,6 +412,11 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       description: 'Triangle tool (T)',
     },
     {
+      key: 's',
+      handler: () => setSelectedTool('star'),
+      description: 'Star tool (S)',
+    },
+    {
       key: 'x',
       handler: () => setSelectedTool('text'),
       description: 'Text tool (X)',
@@ -400,6 +438,47 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         handleOpenExportDialog();
       },
       description: 'Export Canvas (Cmd+E)',
+    },
+    // Alignment shortcuts (optional)
+    {
+      key: 'l',
+      ctrlKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleAlign('left');
+      },
+      description: 'Align Left (Ctrl+Shift+L)',
+    },
+    {
+      key: 'l',
+      metaKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleAlign('left');
+      },
+      description: 'Align Left (Cmd+Shift+L)',
+    },
+    {
+      key: 'r',
+      ctrlKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleAlign('right');
+      },
+      description: 'Align Right (Ctrl+Shift+R)',
+    },
+    {
+      key: 'r',
+      metaKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleAlign('right');
+      },
+      description: 'Align Right (Cmd+Shift+R)',
     },
   ]);
 
@@ -448,7 +527,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
   useEffect(() => {
     if (stageRef.current && !spacePressed && !isPanning) {
       let cursor = 'default';
-      if (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle') {
+      if (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle' || selectedTool === 'star') {
         cursor = 'crosshair';
       } else if (selectedTool === 'text') {
         cursor = 'text';
@@ -477,7 +556,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         setIsPanning(false);
         if (stageRef.current) {
           let cursor = 'default';
-          if (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle') {
+          if (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle' || selectedTool === 'star') {
             cursor = 'crosshair';
           } else if (selectedTool === 'text') {
             cursor = 'text';
@@ -565,7 +644,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
 
     // Start drawing shape with left click on empty canvas (if a drawing tool is selected)
     if (e.evt.button === 0 && !spacePressed && e.target === e.target.getStage() && 
-        (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle' || selectedTool === 'text')) {
+        (selectedTool === 'rectangle' || selectedTool === 'circle' || selectedTool === 'triangle' || selectedTool === 'star' || selectedTool === 'text')) {
       const pos = getRelativePointerPosition();
       if (pos) {
         setIsDrawing(true);
@@ -632,6 +711,8 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
           addShape({ ...baseShape, type: 'circle' });
         } else if (selectedTool === 'triangle') {
           addShape({ ...baseShape, type: 'triangle' });
+        } else if (selectedTool === 'star') {
+          addShape({ ...baseShape, type: 'star' });
         } else if (selectedTool === 'text') {
           addShape({ 
             ...baseShape, 
@@ -702,12 +783,23 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       selectShape(null);
     }
   };
+  
+  /**
+   * Check if a shape is selected (single or multi-select)
+   */
+  const isShapeSelected = (id: string) => {
+    return selectedIds.includes(id) || selectedId === id;
+  };
 
   /**
    * Handle shape selection
    */
-  const handleShapeSelect = (id: string) => {
-    selectShape(id);
+  const handleShapeSelect = (id: string, shiftKey: boolean = false) => {
+    if (shiftKey) {
+      toggleShapeSelection(id);
+    } else {
+      selectShape(id);
+    }
   };
 
   /**
@@ -891,12 +983,6 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       {/* History Manager - handles undo/redo logic */}
       <HistoryManager />
 
-      {/* History Buttons */}
-      <HistoryButtons
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-      />
-
       <Stage
         ref={stageRef}
         width={dimensions.width}
@@ -944,8 +1030,8 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
             <Shape
               key={shape.id}
               shape={shape}
-              isSelected={shape.id === selectedId}
-              onSelect={() => handleShapeSelect(shape.id)}
+              isSelected={isShapeSelected(shape.id)}
+              onSelect={(e?: any) => handleShapeSelect(shape.id, e?.evt?.shiftKey)}
               onDragEnd={handleShapeDragEnd(shape.id)}
               onTransformEnd={handleShapeTransformEnd(shape.id)}
             />
@@ -996,6 +1082,18 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
                   {...previewProps}
                 />
               );
+            } else if (selectedTool === 'star') {
+              const starRadius = Math.min(newShape.width, newShape.height) / 2;
+              return (
+                <Star
+                  x={newShape.x + newShape.width / 2}
+                  y={newShape.y + newShape.height / 2}
+                  numPoints={5}
+                  innerRadius={starRadius * 0.5}
+                  outerRadius={starRadius}
+                  {...previewProps}
+                />
+              );
             } else if (selectedTool === 'text') {
               return (
                 <Text
@@ -1021,10 +1119,17 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         </Layer>
       </Stage>
 
-      {/* Toolbox */}
+      {/* Toolbox - includes drawing tools, history, and alignment */}
       <Toolbox
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={(window as any).__historyManager?.canUndo || false}
+        canRedo={(window as any).__historyManager?.canRedo || false}
+        onAlign={handleAlign}
+        onDistribute={handleDistribute}
+        alignmentEnabled={selectedIds.length >= 2}
       />
 
       {/* Canvas Controls */}

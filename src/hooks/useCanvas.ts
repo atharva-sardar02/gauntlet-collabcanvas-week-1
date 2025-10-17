@@ -32,20 +32,23 @@ export const useCanvas = () => {
 
   /**
    * Add a new shape to the canvas
+   * Returns the ID of the created shape
    */
   const addShape = useCallback(
-    async (shapeData: Omit<Shape, 'id'>) => {
+    async (shapeData: Omit<Shape, 'id'>): Promise<string | null> => {
       if (!currentUser) {
         setError('User not authenticated');
-        return;
+        return null;
       }
 
       try {
         setError(null);
-        await canvasService.createShape(shapeData, currentUser.uid);
+        const shapeId = await canvasService.createShape(shapeData, currentUser.uid);
+        return shapeId;
       } catch (err) {
         console.error('Error adding shape:', err);
         setError('Failed to create shape');
+        return null;
       }
     },
     [currentUser]
@@ -113,6 +116,27 @@ export const useCanvas = () => {
     }
   }, []);
 
+  /**
+   * Recreate a shape with its original ID (for undo operations)
+   */
+  const recreateShape = useCallback(
+    async (shape: Shape) => {
+      if (!currentUser) {
+        setError('User not authenticated');
+        return;
+      }
+
+      try {
+        setError(null);
+        await canvasService.recreateShapeWithId(shape, currentUser.uid);
+      } catch (err) {
+        console.error('Error recreating shape:', err);
+        setError('Failed to recreate shape');
+      }
+    },
+    [currentUser]
+  );
+
   return {
     shapes,
     loading,
@@ -122,6 +146,7 @@ export const useCanvas = () => {
     deleteShape,
     lockShape,
     unlockShape,
+    recreateShape,
   };
 };
 

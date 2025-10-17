@@ -4,6 +4,16 @@ import { useCanvas as useCanvasHook } from '../hooks/useCanvas';
 import { useAuth } from '../hooks/useAuth';
 import { DUPLICATE_OFFSET, CANVAS_WIDTH, CANVAS_HEIGHT } from '../utils/constants';
 import type { Operation } from '../types/operations';
+import {
+  alignLeft,
+  alignRight,
+  alignTop,
+  alignBottom,
+  alignCenterHorizontal,
+  alignCenterVertical,
+  distributeHorizontal,
+  distributeVertical,
+} from '../utils/alignment';
 
 // Define the shape interface
 export interface Shape {
@@ -41,6 +51,7 @@ export interface Shape {
 export interface CanvasContextType {
   shapes: Shape[];
   selectedId: string | null;
+  selectedIds: string[];
   stageRef: React.RefObject<Konva.Stage> | null;
   loading: boolean;
   error: string | null;
@@ -48,6 +59,8 @@ export interface CanvasContextType {
   updateShape: (id: string, updates: Partial<Shape>, skipHistory?: boolean) => Promise<void>;
   deleteShape: (id: string, skipHistory?: boolean) => Promise<void>;
   selectShape: (id: string | null) => void;
+  selectShapes: (ids: string[]) => void;
+  toggleShapeSelection: (id: string) => void;
   setStageRef: (ref: React.RefObject<Konva.Stage>) => void;
   lockShape: (id: string, userColor: string) => Promise<void>;
   unlockShape: (id: string) => Promise<void>;
@@ -55,6 +68,8 @@ export interface CanvasContextType {
   nudgeShape: (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number, skipHistory?: boolean) => Promise<void>;
   setOperationCallback: (callback: ((operation: Operation) => void) | null) => void;
   recreateShape: (shape: Shape) => Promise<void>;
+  alignShapes: (ids: string[], mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => Promise<void>;
+  distributeShapes: (ids: string[], axis: 'horizontal' | 'vertical') => Promise<void>;
 }
 
 // Create the context
@@ -71,6 +86,7 @@ interface CanvasProviderProps {
  */
 export const CanvasProvider = ({ children }: CanvasProviderProps) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [stageRef, setStageRefState] = useState<React.RefObject<Konva.Stage> | null>(null);
   const operationCallbackRef = useRef<((operation: Operation) => void) | null>(null);
   
@@ -87,6 +103,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     deleteShape: deleteShapeFromFirebase,
     lockShape: lockShapeInFirebase,
     unlockShape: unlockShapeInFirebase,
+    recreateShape: recreateShapeInFirebase,
   } = useCanvasHook();
 
   /**
@@ -95,13 +112,27 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    */
   const addShape = useCallback(
     async (shape: Omit<Shape, 'id'>, skipHistory = false) => {
-      await addShapeToFirebase(shape);
+      const shapeId = await addShapeToFirebase(shape);
       
-      // Track operation for undo/redo (will be called after shape is created)
-      // Note: For create operations, we track them via the shapes subscription
-      // since we need the actual Firebase-generated ID
+      // Track operation for undo/redo
+      if (!skipHistory && operationCallbackRef.current && shapeId && currentUser) {
+        const fullShape: Shape = {
+          ...shape,
+          id: shapeId,
+        } as Shape;
+        
+        operationCallbackRef.current({
+          id: `op-${Date.now()}`,
+          type: 'create',
+          userId: currentUser.uid,
+          timestamp: Date.now(),
+          before: {},
+          after: { shapeData: fullShape },
+          shapeIds: [shapeId],
+        });
+      }
     },
-    [addShapeToFirebase]
+    [addShapeToFirebase, currentUser]
   );
 
   /**
@@ -159,10 +190,36 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
   );
 
   /**
-   * Select or deselect a shape
+   * Select or deselect a shape (single selection)
    */
   const selectShape = useCallback((id: string | null) => {
     setSelectedId(id);
+    setSelectedIds(id ? [id] : []);
+  }, []);
+
+  /**
+   * Select multiple shapes
+   */
+  const selectShapes = useCallback((ids: string[]) => {
+    setSelectedIds(ids);
+    setSelectedId(ids.length === 1 ? ids[0] : ids[0] || null);
+  }, []);
+
+  /**
+   * Toggle shape selection (for multi-select with Shift key)
+   */
+  const toggleShapeSelection = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) {
+        const newIds = prev.filter(i => i !== id);
+        setSelectedId(newIds.length === 1 ? newIds[0] : newIds[0] || null);
+        return newIds;
+      } else {
+        const newIds = [...prev, id];
+        setSelectedId(newIds.length === 1 ? newIds[0] : id);
+        return newIds;
+      }
+    });
   }, []);
 
   /**
@@ -284,19 +341,108 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
 
   /**
    * Recreate a shape (for undo of delete operations)
-   * @param shape - Complete shape data to recreate
+   * @param shape - Complete shape data to recreate with original ID
    */
   const recreateShape = useCallback(
     async (shape: Shape) => {
       // Use the canvas service to recreate the shape with its original ID
-      await addShapeToFirebase(shape);
+      if (recreateShapeInFirebase) {
+        await recreateShapeInFirebase(shape);
+      }
     },
-    [addShapeToFirebase]
+    [recreateShapeInFirebase]
+  );
+
+  /**
+   * Align multiple shapes
+   * @param ids - Array of shape IDs to align
+   * @param mode - Alignment mode
+   */
+  const alignShapes = useCallback(
+    async (ids: string[], mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => {
+      if (ids.length < 2) return;
+
+      // Get shapes to align
+      const shapesToAlign = shapes.filter(s => ids.includes(s.id));
+      if (shapesToAlign.length < 2) return;
+
+      // Check if any shapes are locked
+      const hasLockedShapes = shapesToAlign.some(s => s.isLocked);
+      if (hasLockedShapes) {
+        console.warn('Cannot align: some shapes are locked');
+        return;
+      }
+
+      // Calculate alignment updates
+      let updates: Map<string, any>;
+      switch (mode) {
+        case 'left':
+          updates = alignLeft(shapesToAlign);
+          break;
+        case 'right':
+          updates = alignRight(shapesToAlign);
+          break;
+        case 'top':
+          updates = alignTop(shapesToAlign);
+          break;
+        case 'bottom':
+          updates = alignBottom(shapesToAlign);
+          break;
+        case 'center-h':
+          updates = alignCenterHorizontal(shapesToAlign);
+          break;
+        case 'center-v':
+          updates = alignCenterVertical(shapesToAlign);
+          break;
+        default:
+          return;
+      }
+
+      // Apply updates to all shapes
+      for (const [shapeId, updateData] of updates.entries()) {
+        await updateShapeInFirebase(shapeId, updateData);
+      }
+    },
+    [shapes, updateShapeInFirebase]
+  );
+
+  /**
+   * Distribute shapes evenly
+   * @param ids - Array of shape IDs to distribute
+   * @param axis - Distribution axis
+   */
+  const distributeShapes = useCallback(
+    async (ids: string[], axis: 'horizontal' | 'vertical') => {
+      if (ids.length < 3) return; // Need at least 3 shapes to distribute
+
+      // Get shapes to distribute
+      const shapesToDistribute = shapes.filter(s => ids.includes(s.id));
+      if (shapesToDistribute.length < 3) return;
+
+      // Check if any shapes are locked
+      const hasLockedShapes = shapesToDistribute.some(s => s.isLocked);
+      if (hasLockedShapes) {
+        console.warn('Cannot distribute: some shapes are locked');
+        return;
+      }
+
+      // Calculate distribution updates
+      const updates = axis === 'horizontal' 
+        ? distributeHorizontal(shapesToDistribute)
+        : distributeVertical(shapesToDistribute);
+
+      // Apply updates to all shapes
+      for (const [shapeId, updateData] of updates.entries()) {
+        await updateShapeInFirebase(shapeId, updateData);
+      }
+    },
+    [shapes, updateShapeInFirebase]
   );
 
   const value: CanvasContextType = {
     shapes,
     selectedId,
+    selectedIds,
     stageRef,
     loading,
     error,
@@ -304,6 +450,8 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     updateShape,
     deleteShape,
     selectShape,
+    selectShapes,
+    toggleShapeSelection,
     setStageRef,
     lockShape,
     unlockShape,
@@ -313,6 +461,8 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
       operationCallbackRef.current = callback;
     }, []),
     recreateShape,
+    alignShapes,
+    distributeShapes,
   };
 
   return (
