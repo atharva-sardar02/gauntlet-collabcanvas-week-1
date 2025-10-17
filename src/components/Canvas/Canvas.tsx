@@ -15,7 +15,6 @@ import ContextMenu from './ContextMenu';
 import { exportCanvas, exportSelection, downloadDataURL, generateFilename, getDataURLSize } from '../../services/export';
 import { useCursors } from '../../hooks/useCursors';
 import { usePresence } from '../../hooks/usePresence';
-import { useAuth } from '../../hooks/useAuth';
 import { useKeyboard, useKeyRepeat } from '../../hooks/useKeyboard';
 import { useAIAgent } from '../../contexts/AIAgentContext';
 import {
@@ -81,11 +80,8 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   // Cursor tracking
   const { cursors, userColor, updateCursorPosition } = useCursors();
 
-  // Presence tracking (use same color as cursor)
-  const { onlineUsers } = usePresence(userColor);
-
-  // Current user for presence list
-  const { currentUser } = useAuth();
+  // Presence tracking (use same color as cursor) - maintains user presence in Firestore
+  usePresence(userColor);
 
   // AI Agent for command bar
   const { openCommandBar } = useAIAgent();

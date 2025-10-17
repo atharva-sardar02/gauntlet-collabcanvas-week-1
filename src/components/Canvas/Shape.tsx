@@ -25,9 +25,9 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
   const getEditorName = () => {
     if (!shape.lastModifiedBy) return null;
     
-    // If it's the current user
+    // If it's the current user, don't show the marker
     if (currentUser && shape.lastModifiedBy === currentUser.uid) {
-      return 'You';
+      return null;
     }
     
     // Use the stored name if available
