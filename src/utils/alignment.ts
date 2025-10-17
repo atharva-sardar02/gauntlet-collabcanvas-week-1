@@ -151,19 +151,21 @@ export const distributeHorizontal = (shapes: Shape[]): Map<string, { x: number }
   // Sort shapes by x position (left edge)
   const sorted = [...shapes].sort((a, b) => a.x - b.x);
   
-  // Keep first shape in place, distribute rest with 100px gap
+  // Calculate all positions in one pass based on current positions
+  let currentX = sorted[0].x; // Start from the leftmost shape
+  
   sorted.forEach((shape, index) => {
     if (index === 0) {
       // First shape stays in place
+      currentX = shape.x + shape.width + GAP; // Set starting point for next shape
       return;
     }
     
-    // Previous shape's right edge: prevX + prevWidth
-    // Current shape's x (left edge) should be at: rightEdge + GAP
-    const prevShape = sorted[index - 1];
-    const newX = prevShape.x + prevShape.width + GAP;
+    // Position this shape at currentX
+    updates.set(shape.id, { x: currentX });
     
-    updates.set(shape.id, { x: newX });
+    // Update currentX for the next shape (this shape's right edge + gap)
+    currentX = currentX + shape.width + GAP;
   });
 
   return updates;
@@ -183,19 +185,21 @@ export const distributeVertical = (shapes: Shape[]): Map<string, { y: number }> 
   // Sort shapes by y position (top edge)
   const sorted = [...shapes].sort((a, b) => a.y - b.y);
   
-  // Keep first shape in place, distribute rest with 100px gap
+  // Calculate all positions in one pass based on current positions
+  let currentY = sorted[0].y; // Start from the topmost shape
+  
   sorted.forEach((shape, index) => {
     if (index === 0) {
       // First shape stays in place
+      currentY = shape.y + shape.height + GAP; // Set starting point for next shape
       return;
     }
     
-    // Previous shape's bottom edge: prevY + prevHeight
-    // Current shape's y (top edge) should be at: bottomEdge + GAP
-    const prevShape = sorted[index - 1];
-    const newY = prevShape.y + prevShape.height + GAP;
+    // Position this shape at currentY
+    updates.set(shape.id, { y: currentY });
     
-    updates.set(shape.id, { y: newY });
+    // Update currentY for the next shape (this shape's bottom edge + gap)
+    currentY = currentY + shape.height + GAP;
   });
 
   return updates;

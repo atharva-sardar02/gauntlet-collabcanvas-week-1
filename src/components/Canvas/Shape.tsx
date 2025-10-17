@@ -12,9 +12,10 @@ interface ShapeProps {
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
   onContextMenu?: (e: Konva.KonvaEventObject<PointerEvent>) => void;
+  hideTransformer?: boolean; // Hide individual transformer when using group transformer
 }
 
-const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onContextMenu }: ShapeProps) => {
+const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onContextMenu, hideTransformer = false }: ShapeProps) => {
   const context = useContext(CanvasContext);
   const { currentUser } = useAuth();
   const shapeRef = useRef<any>(null);
@@ -220,7 +221,7 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
         )}
       </Group>
       
-      {isSelected && (
+      {isSelected && !hideTransformer && (
         <Transformer
           ref={transformerRef}
           boundBoxFunc={(oldBox, newBox) => {

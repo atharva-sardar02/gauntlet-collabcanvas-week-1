@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
-import { Stage, Layer, Rect, Line, Circle, Text, Star } from 'react-konva';
+import { Stage, Layer, Rect, Line, Circle, Text, Star, Transformer } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
@@ -48,6 +48,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
 
   const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes } = context;
   const stageRef = useRef<Konva.Stage>(null);
+  const multiSelectTransformerRef = useRef<Konva.Transformer>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
   const [isPanning, setIsPanning] = useState(false);
@@ -87,6 +88,41 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   const { openCommandBar } = useAIAgent();
 
   /**
+   * Multi-select transformer - attach to all selected shapes
+   */
+  useEffect(() => {
+    const transformer = multiSelectTransformerRef.current;
+    if (!transformer) return;
+
+    // Only use multi-select transformer when 2+ shapes are selected
+    if (selectedIds.length >= 2 && stageRef.current) {
+      const stage = stageRef.current;
+      const layers = stage.getLayers();
+      if (layers.length === 0) return;
+
+      // Find all selected shape nodes from all layers
+      const selectedNodes: Konva.Node[] = [];
+      selectedIds.forEach(id => {
+        for (const layer of layers) {
+          const node = layer.findOne(`#${id}`);
+          if (node) {
+            selectedNodes.push(node);
+            break; // Found the node, no need to check other layers
+          }
+        }
+      });
+
+      // Attach transformer to all selected nodes
+      transformer.nodes(selectedNodes);
+      transformer.getLayer()?.batchDraw();
+    } else {
+      // Clear transformer if less than 2 shapes selected
+      transformer.nodes([]);
+      transformer.getLayer()?.batchDraw();
+    }
+  }, [selectedIds, shapes]);
+
+  /**
    * Sort shapes by zIndex for correct rendering order
    * Lower zIndex renders first (behind), higher zIndex renders last (in front)
    */
@@ -109,39 +145,51 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
    * Handle duplicate shortcut (Ctrl/Cmd + D)
    */
   const handleDuplicate = useCallback(async () => {
-    if (!selectedId) return;
+    // Use selectedIds if available, otherwise fall back to selectedId
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
     
-    const shape = shapes.find(s => s.id === selectedId);
-    if (!shape) return;
+    const shapesToDuplicate = shapes.filter(s => idsToProcess.includes(s.id));
+    if (shapesToDuplicate.length === 0) return;
     
-    // Don't duplicate if locked by another user
-    if (shape.isLocked) {
-      showToast('Cannot duplicate locked shape', 'error');
+    // Check if any shapes are locked
+    const lockedShapes = shapesToDuplicate.filter(s => s.isLocked);
+    if (lockedShapes.length > 0) {
+      showToast(`Cannot duplicate ${lockedShapes.length} locked shape${lockedShapes.length > 1 ? 's' : ''}`, 'error');
       return;
     }
 
-    await duplicateShape(selectedId);
-    showToast('Shape duplicated', 'success');
-  }, [selectedId, shapes, duplicateShape, showToast]);
+    // Duplicate all selected shapes
+    for (const id of idsToProcess) {
+      await duplicateShape(id);
+    }
+    showToast(`Duplicated ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''}`, 'success');
+  }, [selectedIds, selectedId, shapes, duplicateShape, showToast]);
 
   /**
    * Handle delete shortcut (Delete/Backspace)
    */
   const handleDelete = useCallback(async () => {
-    if (!selectedId) return;
+    // Use selectedIds if available, otherwise fall back to selectedId
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
     
-    const shape = shapes.find(s => s.id === selectedId);
-    if (!shape) return;
+    const shapesToDelete = shapes.filter(s => idsToProcess.includes(s.id));
+    if (shapesToDelete.length === 0) return;
     
-    // Don't delete if locked by another user
-    if (shape.isLocked) {
-      showToast('Cannot delete locked shape', 'error');
+    // Check if any shapes are locked
+    const lockedShapes = shapesToDelete.filter(s => s.isLocked);
+    if (lockedShapes.length > 0) {
+      showToast(`Cannot delete ${lockedShapes.length} locked shape${lockedShapes.length > 1 ? 's' : ''}`, 'error');
       return;
     }
 
-    await deleteShape(selectedId);
-    showToast('Shape deleted', 'success');
-  }, [selectedId, shapes, deleteShape, showToast]);
+    // Delete all selected shapes
+    for (const id of idsToProcess) {
+      await deleteShape(id);
+    }
+    showToast(`Deleted ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''}`, 'success');
+  }, [selectedIds, selectedId, shapes, deleteShape, showToast]);
 
   /**
    * Handle escape to deselect
@@ -191,28 +239,44 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
    * Layer Management Handlers
    */
   const handleBringToFront = useCallback(async () => {
-    if (!selectedId) return;
-    await bringShapeToFront(selectedId);
-    showToast('Brought shape to front', 'success');
-  }, [selectedId, bringShapeToFront, showToast]);
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
+    
+    for (const id of idsToProcess) {
+      await bringShapeToFront(id);
+    }
+    showToast(`Brought ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''} to front`, 'success');
+  }, [selectedIds, selectedId, bringShapeToFront, showToast]);
 
   const handleSendToBack = useCallback(async () => {
-    if (!selectedId) return;
-    await sendShapeToBack(selectedId);
-    showToast('Sent shape to back', 'success');
-  }, [selectedId, sendShapeToBack, showToast]);
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
+    
+    for (const id of idsToProcess) {
+      await sendShapeToBack(id);
+    }
+    showToast(`Sent ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''} to back`, 'success');
+  }, [selectedIds, selectedId, sendShapeToBack, showToast]);
 
   const handleBringForward = useCallback(async () => {
-    if (!selectedId) return;
-    await bringShapeForward(selectedId);
-    showToast('Brought shape forward', 'success');
-  }, [selectedId, bringShapeForward, showToast]);
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
+    
+    for (const id of idsToProcess) {
+      await bringShapeForward(id);
+    }
+    showToast(`Brought ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''} forward`, 'success');
+  }, [selectedIds, selectedId, bringShapeForward, showToast]);
 
   const handleSendBackward = useCallback(async () => {
-    if (!selectedId) return;
-    await sendShapeBackward(selectedId);
-    showToast('Sent shape backward', 'success');
-  }, [selectedId, sendShapeBackward, showToast]);
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
+    
+    for (const id of idsToProcess) {
+      await sendShapeBackward(id);
+    }
+    showToast(`Sent ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''} backward`, 'success');
+  }, [selectedIds, selectedId, sendShapeBackward, showToast]);
 
   /**
    * Handle clear canvas with confirmation
@@ -261,10 +325,16 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
    * Handle arrow key nudging with repeat
    */
   const handleNudge = useCallback((key: string, shiftKey: boolean) => {
-    if (!selectedId) return;
+    // Use selectedIds if available, otherwise fall back to selectedId
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
     
-    const shape = shapes.find(s => s.id === selectedId);
-    if (!shape || shape.isLocked) return;
+    const shapesToNudge = shapes.filter(s => idsToProcess.includes(s.id));
+    if (shapesToNudge.length === 0) return;
+    
+    // Check if any shapes are locked
+    const hasLockedShapes = shapesToNudge.some(s => s.isLocked);
+    if (hasLockedShapes) return; // Silently skip if any shape is locked
 
     const amount = shiftKey ? NUDGE_LARGE : NUDGE_SMALL;
     
@@ -286,9 +356,12 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
     }
 
     if (direction) {
-      nudgeShape(selectedId, direction, amount);
+      // Nudge all selected shapes
+      for (const id of idsToProcess) {
+        nudgeShape(id, direction, amount);
+      }
     }
-  }, [selectedId, shapes, nudgeShape]);
+  }, [selectedIds, selectedId, shapes, nudgeShape]);
 
   /**
    * Handle undo shortcut
@@ -1285,6 +1358,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
               onDragEnd={handleShapeDragEnd(shape.id)}
               onTransformEnd={handleShapeTransformEnd(shape.id)}
               onContextMenu={(e) => handleContextMenu(e, shape.id)}
+              hideTransformer={selectedIds.length >= 2}
             />
           ))}
 
@@ -1367,6 +1441,20 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
             }
             return null;
           })()}
+
+          {/* Multi-select transformer - shows group bounding box for 2+ selected shapes */}
+          {selectedIds.length >= 2 && (
+            <Transformer
+              ref={multiSelectTransformerRef}
+              boundBoxFunc={(oldBox, newBox) => {
+                // Limit resize to minimum size
+                if (newBox.width < 10 || newBox.height < 10) {
+                  return oldBox;
+                }
+                return newBox;
+              }}
+            />
+          )}
         </Layer>
       </Stage>
 
@@ -1481,6 +1569,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
           onSendToBack={() => handleSendToBack()}
           onDuplicate={() => handleDuplicate()}
           onDelete={() => handleDelete()}
+          selectedCount={selectedIds.length > 0 ? selectedIds.length : 1}
           disabledOperations={{
             bringToFront: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === getShapeLayerInfo(contextMenu.shapeId).total) : false,
             sendToBack: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === 1) : false,

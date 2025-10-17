@@ -12,6 +12,8 @@ interface ContextMenuProps {
   // Other operations
   onDuplicate?: () => void;
   onDelete?: () => void;
+  // Selection info
+  selectedCount?: number;
   // Disabled states
   disabledOperations?: {
     bringToFront?: boolean;
@@ -31,6 +33,7 @@ const ContextMenu = ({
   onSendToBack,
   onDuplicate,
   onDelete,
+  selectedCount = 1,
   disabledOperations = {},
 }: ContextMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -97,6 +100,17 @@ const ContextMenu = ({
       className="fixed bg-gray-800 border border-gray-700 rounded-lg shadow-2xl py-1 z-[10000] min-w-[200px]"
       style={{ left: x, top: y }}
     >
+      {/* Selection Header */}
+      {selectedCount > 1 && (
+        <>
+          <div className="px-3 py-2 bg-blue-900/20 border-b border-gray-700">
+            <div className="text-sm font-semibold text-blue-300">
+              {selectedCount} shapes selected
+            </div>
+          </div>
+        </>
+      )}
+      
       {/* Layer Management Section */}
       {(onBringToFront || onBringForward || onSendBackward || onSendToBack) && (
         <>
