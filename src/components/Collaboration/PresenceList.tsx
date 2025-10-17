@@ -20,7 +20,7 @@ const PresenceList = ({ users, currentUserId }: PresenceListProps) => {
         {/* Header */}
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 transition-all duration-200 flex items-center justify-between text-white shadow-lg"
+          className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 transition-all duration-200 flex items-center justify-between text-white shadow-lg"
         >
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>

@@ -82,14 +82,14 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
       <div className="bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 p-8 w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-blue-600 rounded-2xl flex items-center justify-center">
             <span className="text-white font-bold text-2xl">C</span>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl font-bold text-blue-400 mb-2">
             Join CollabCanvas
           </h1>
           <p className="text-gray-400">
@@ -165,7 +165,7 @@ const Signup = ({ onSwitchToLogin }: SignupProps) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-blue-500/50 hover:scale-105 disabled:from-gray-600 disabled:to-gray-600 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:scale-100"
           >
             {loading ? 'Creating Account...' : 'Sign Up'}
           </button>

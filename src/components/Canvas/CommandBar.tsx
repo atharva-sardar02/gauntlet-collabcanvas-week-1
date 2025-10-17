@@ -85,22 +85,22 @@ export function CommandBar() {
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-32 z-50"
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-start justify-center pt-32 z-50"
       onClick={closeCommandBar}
     >
       <div
-        className="bg-white rounded-lg shadow-2xl w-full max-w-2xl mx-4"
+        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 border border-gray-700"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-200">
+        <div className="px-6 pt-6 pb-4 border-b border-gray-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-100">
               AI Canvas Command
             </h2>
             <button
               onClick={closeCommandBar}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 hover:text-gray-200 transition-colors"
               aria-label="Close"
             >
               <svg
@@ -118,7 +118,7 @@ export function CommandBar() {
               </svg>
             </button>
           </div>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-gray-400 mt-1">
             Describe what you want to create or modify on the canvas
           </p>
         </div>
@@ -132,31 +132,31 @@ export function CommandBar() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="e.g., Create a blue rectangle at 100, 100..."
-            className="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 text-lg bg-gray-900 border-2 border-gray-700 text-gray-100 placeholder-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             disabled={isProcessing}
           />
 
           {/* Error Message */}
           {error && (
-            <div className="mt-3 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="mt-3 px-4 py-2 bg-red-900 bg-opacity-20 border border-red-600 rounded-lg text-red-300 text-sm">
               {error}
             </div>
           )}
 
           {/* Progress Display */}
           {isProcessing && progress && (
-            <div className="mt-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="mt-3 px-4 py-3 bg-blue-900 bg-opacity-20 border border-blue-600 rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-900">
+                <span className="text-sm font-medium text-blue-300">
                   Processing batch {progress.batchNumber}...
                 </span>
-                <span className="text-sm text-blue-700">
+                <span className="text-sm text-blue-400">
                   {progress.current} operations
                 </span>
               </div>
-              <div className="w-full bg-blue-200 rounded-full h-2">
+              <div className="w-full bg-gray-700 rounded-full h-2">
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${Math.min((progress.current / progress.total) * 100, 100)}%` }}
                 />
               </div>
@@ -165,21 +165,21 @@ export function CommandBar() {
 
           {/* Action Buttons */}
           <div className="flex justify-between items-center mt-4">
-            <div className="text-sm text-gray-500">
-              Press <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">↑</kbd> / <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded">↓</kbd> for history
+            <div className="text-sm text-gray-400">
+              Press <kbd className="px-2 py-1 bg-gray-900 border border-gray-700 text-gray-300 rounded">↑</kbd> / <kbd className="px-2 py-1 bg-gray-900 border border-gray-700 text-gray-300 rounded">↓</kbd> for history
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={closeCommandBar}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="px-4 py-2 text-gray-400 hover:text-gray-200 transition-colors"
                 disabled={isProcessing}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-lg"
                 disabled={!input.trim() || isProcessing}
               >
                 {isProcessing ? (
@@ -215,13 +215,13 @@ export function CommandBar() {
 
         {/* Command History */}
         {commandHistory.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm font-medium text-gray-700 mb-2">Recent commands:</p>
+          <div className="px-6 py-4 border-t border-gray-700 bg-gray-900 bg-opacity-50">
+            <p className="text-sm font-medium text-gray-300 mb-2">Recent commands:</p>
             <div className="space-y-1">
               {commandHistory.slice(0, 5).map((cmd, i) => (
                 <div
                   key={i}
-                  className="text-sm text-gray-600 hover:text-blue-600 hover:bg-white cursor-pointer px-3 py-2 rounded transition-colors truncate"
+                  className="text-sm text-gray-400 hover:text-blue-400 hover:bg-gray-800 cursor-pointer px-3 py-2 rounded transition-colors truncate"
                   onClick={() => {
                     setInput(cmd);
                     setHistoryIndex(i);
@@ -237,13 +237,13 @@ export function CommandBar() {
 
         {/* Example Commands (shown when no history) */}
         {commandHistory.length === 0 && (
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-            <p className="text-sm font-medium text-gray-700 mb-2">Try these commands:</p>
+          <div className="px-6 py-4 border-t border-gray-700 bg-gray-900 bg-opacity-50">
+            <p className="text-sm font-medium text-gray-300 mb-2">Try these commands:</p>
             <div className="space-y-1">
               {EXAMPLE_COMMANDS.map((cmd, i) => (
                 <div
                   key={i}
-                  className="text-sm text-gray-600 hover:text-blue-600 hover:bg-white cursor-pointer px-3 py-2 rounded transition-colors truncate"
+                  className="text-sm text-gray-400 hover:text-blue-400 hover:bg-gray-800 cursor-pointer px-3 py-2 rounded transition-colors truncate"
                   onClick={() => setInput(cmd)}
                   title={cmd}
                 >

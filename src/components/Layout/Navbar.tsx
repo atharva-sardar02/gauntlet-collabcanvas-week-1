@@ -60,10 +60,10 @@ const Navbar = ({ onExport, hasShapes = false, isToolboxVisible = true, onToggle
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
             </div>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold text-blue-400">
               CollabCanvas
             </h1>
           </div>
@@ -74,7 +74,7 @@ const Navbar = ({ onExport, hasShapes = false, isToolboxVisible = true, onToggle
               {/* AI Command Button */}
               <button
                 onClick={openCommandBar}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-purple-500/50 hover:scale-105"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:scale-105"
                 title="AI Commands (Ctrl+/ or Cmd+/)"
               >
                 <svg
@@ -233,7 +233,7 @@ const Navbar = ({ onExport, hasShapes = false, isToolboxVisible = true, onToggle
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center gap-3 hover:bg-gray-800 px-3 py-2 rounded-lg transition-all duration-200"
                 >
-                  <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-semibold shadow-lg">
+                  <div className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-semibold shadow-lg">
                     {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'U'}
                   </div>
                   <span className="text-gray-200 font-medium hidden sm:block">

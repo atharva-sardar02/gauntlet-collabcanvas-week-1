@@ -56,17 +56,18 @@ export const getRandomShapeColor = (): string => {
 // Minimum shape size (prevents accidental tiny shapes)
 export const MIN_SHAPE_SIZE = 10;
 
-// Cursor colors for different users
+// Cursor colors for different users (darker colors for better contrast with white text)
 export const CURSOR_COLORS = [
-  '#FF5733', // Red-Orange
-  '#33C1FF', // Sky Blue
-  '#FFC300', // Golden Yellow
-  '#DAF7A6', // Light Green
-  '#C70039', // Crimson
-  '#900C3F', // Burgundy
-  '#581845', // Deep Purple
-  '#28B463', // Emerald Green
-  '#3498DB', // Dodger Blue
+  '#EF4444', // Red
+  '#3B82F6', // Blue
+  '#F59E0B', // Amber
+  '#10B981', // Green
+  '#8B5CF6', // Purple
+  '#EC4899', // Pink
+  '#14B8A6', // Teal
+  '#F97316', // Orange
+  '#6366F1', // Indigo
+  '#84CC16', // Lime
 ];
 
 // Get a random cursor color from the palette
