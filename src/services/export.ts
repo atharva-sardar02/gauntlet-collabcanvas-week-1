@@ -8,13 +8,16 @@ export interface ExportOptions {
 }
 
 /**
- * Export the entire canvas as PNG (full 5000x5000px canvas, not just viewport)
+ * Export the entire canvas as PNG (all visible shapes with bounding box)
+ * For infinite canvas: calculates bounding box of all shapes
  * @param stageRef - Reference to the Konva Stage
+ * @param shapes - Array of all shapes on the canvas
  * @param options - Export options (pixelRatio, format, quality)
  * @returns Data URL of the exported image
  */
 export const exportCanvas = async (
   stageRef: React.RefObject<Konva.Stage | null>,
+  shapes: Shape[],
   options: ExportOptions = {}
 ): Promise<string> => {
   const stage = stageRef.current;
@@ -22,9 +25,24 @@ export const exportCanvas = async (
     throw new Error('Stage reference is not available');
   }
 
+  // If no shapes, export a 1000x1000 blank canvas centered at origin
+  if (shapes.length === 0) {
+    throw new Error('No shapes on canvas to export');
+  }
+
   const { pixelRatio = 1, quality = 1.0 } = options;
 
   try {
+    // Calculate bounding box of all shapes
+    const bounds = calculateBoundingBox(shapes);
+    
+    // Add padding around shapes (100px on each side)
+    const padding = 100;
+    const exportX = bounds.x - padding;
+    const exportY = bounds.y - padding;
+    const exportWidth = bounds.width + (padding * 2);
+    const exportHeight = bounds.height + (padding * 2);
+
     // Store original stage dimensions and transform
     const originalWidth = stage.width();
     const originalHeight = stage.height();
@@ -33,31 +51,13 @@ export const exportCanvas = async (
     const originalScaleX = stage.scaleX();
     const originalScaleY = stage.scaleY();
 
-    // Get all layers to find actual canvas dimensions (5000x5000)
-    const layers = stage.getLayers();
-    let canvasWidth = 5000; // Default from constants
-    let canvasHeight = 5000;
-
-    // Try to get actual dimensions from background layer
-    if (layers.length > 0) {
-      const backgroundLayer = layers[0];
-      const children = backgroundLayer.getChildren();
-      if (children.length > 0) {
-        const background = children[0];
-        if (background.attrs.width && background.attrs.height) {
-          canvasWidth = background.attrs.width;
-          canvasHeight = background.attrs.height;
-        }
-      }
-    }
-
-    // Temporarily set stage to full canvas size with no transform
-    stage.width(canvasWidth);
-    stage.height(canvasHeight);
-    stage.position({ x: 0, y: 0 });
+    // Temporarily set stage to bounding box size with offset to include all shapes
+    stage.width(exportWidth);
+    stage.height(exportHeight);
+    stage.position({ x: -exportX, y: -exportY });
     stage.scale({ x: 1, y: 1 });
 
-    // Export the entire stage
+    // Export the stage
     const dataURL = stage.toDataURL({
       pixelRatio,
       mimeType: 'image/png',

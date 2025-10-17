@@ -2,7 +2,7 @@ import { createContext, useState, type ReactNode, useCallback, useRef } from 're
 import Konva from 'konva';
 import { useCanvas as useCanvasHook } from '../hooks/useCanvas';
 import { useAuth } from '../hooks/useAuth';
-import { DUPLICATE_OFFSET, CANVAS_WIDTH, CANVAS_HEIGHT } from '../utils/constants';
+import { DUPLICATE_OFFSET } from '../utils/constants';
 import type { Operation } from '../types/operations';
 import {
   alignLeft,
@@ -299,8 +299,8 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
       // Clone the shape with a new ID and offset position
       const duplicatedShape: Omit<Shape, 'id'> = {
         type: shape.type,
-        x: Math.min(shape.x + DUPLICATE_OFFSET, CANVAS_WIDTH - shape.width),
-        y: Math.min(shape.y + DUPLICATE_OFFSET, CANVAS_HEIGHT - shape.height),
+        x: shape.x + DUPLICATE_OFFSET,
+        y: shape.y + DUPLICATE_OFFSET,
         width: shape.width,
         height: shape.height,
         fill: shape.fill,
@@ -344,16 +344,16 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
 
       switch (direction) {
         case 'up':
-          updates = { y: Math.max(0, shape.y - amount) };
+          updates = { y: shape.y - amount };
           break;
         case 'down':
-          updates = { y: Math.min(CANVAS_HEIGHT - shape.height, shape.y + amount) };
+          updates = { y: shape.y + amount };
           break;
         case 'left':
-          updates = { x: Math.max(0, shape.x - amount) };
+          updates = { x: shape.x - amount };
           break;
         case 'right':
-          updates = { x: Math.min(CANVAS_WIDTH - shape.width, shape.x + amount) };
+          updates = { x: shape.x + amount };
           break;
       }
 

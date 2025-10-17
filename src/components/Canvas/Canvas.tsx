@@ -18,8 +18,6 @@ import { usePresence } from '../../hooks/usePresence';
 import { useKeyboard, useKeyRepeat } from '../../hooks/useKeyboard';
 import { useAIAgent } from '../../contexts/AIAgentContext';
 import {
-  CANVAS_WIDTH,
-  CANVAS_HEIGHT,
   CANVAS_CENTER_X,
   CANVAS_CENTER_Y,
   GRID_SPACING,
@@ -75,8 +73,9 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; shapeId: string } | null>(null);
   
-  // Force re-render when stage transforms (for cursor positioning)
+  // Force re-render when stage transforms (for cursor positioning and grid updates)
   const [, setUpdateTrigger] = useState(0);
+  const [gridUpdateTrigger, setGridUpdateTrigger] = useState(0);
 
   // Cursor tracking
   const { cursors, userColor, updateCursorPosition } = useCursors();
@@ -425,7 +424,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
 
       if (scope === 'canvas') {
         // Export full canvas
-        dataURL = await exportCanvas(stageRef, { pixelRatio });
+        dataURL = await exportCanvas(stageRef, shapes, { pixelRatio });
         filename = generateFilename('collabcanvas-full');
       } else {
         // Export selected shape(s)
@@ -876,22 +875,6 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   /**
    * Constrain stage position to canvas boundaries
    */
-  const constrainPosition = (stage: Konva.Stage) => {
-    const scale = stage.scaleX();
-    const x = stage.x();
-    const y = stage.y();
-
-    const minX = -CANVAS_WIDTH * scale + dimensions.width;
-    const maxX = 0;
-    const minY = -CANVAS_HEIGHT * scale + dimensions.height;
-    const maxY = 0;
-
-    const newX = Math.min(maxX, Math.max(minX, x));
-    const newY = Math.min(maxY, Math.max(minY, y));
-
-    stage.position({ x: newX, y: newY });
-  };
-
   /**
    * Get relative pointer position on the canvas
    */
@@ -1027,9 +1010,9 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
    */
   const handleDragMove = () => {
     if (stageRef.current) {
-      constrainPosition(stageRef.current);
-      // Trigger re-render to update cursor positions
+      // Trigger re-render to update cursor positions and grid
       setUpdateTrigger(prev => prev + 1);
+      setGridUpdateTrigger(prev => prev + 1);
     }
   };
 
@@ -1065,8 +1048,8 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
     };
 
     stage.position(newPos);
-    constrainPosition(stage);
     setScale(newScale);
+    setGridUpdateTrigger(prev => prev + 1);
   };
 
   /**
@@ -1207,8 +1190,8 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
       };
 
       stage.position(newPos);
-      constrainPosition(stage);
       setScale(newScale);
+      setGridUpdateTrigger(prev => prev + 1);
     }
   };
 
@@ -1239,43 +1222,77 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
       };
 
       stage.position(newPos);
-      constrainPosition(stage);
       setScale(newScale);
+      setGridUpdateTrigger(prev => prev + 1);
     }
   };
 
   /**
    * Generate grid lines for visual reference
    */
-  const generateGridLines = () => {
+  /**
+   * Generate infinite grid lines based on current viewport
+   * Dynamically calculates visible area and renders grid tiles
+   */
+  const generateGridLines = useCallback(() => {
+    if (!stageRef.current) return [];
+    
+    const stage = stageRef.current;
     const lines = [];
     
-    for (let i = 0; i <= CANVAS_WIDTH; i += GRID_SPACING) {
+    // Calculate visible area in canvas coordinates
+    const viewportWidth = dimensions.width;
+    const viewportHeight = dimensions.height;
+    const stageX = stage.x();
+    const stageY = stage.y();
+    
+    // Convert viewport bounds to canvas coordinates
+    const startX = -stageX / scale;
+    const startY = -stageY / scale;
+    const endX = startX + viewportWidth / scale;
+    const endY = startY + viewportHeight / scale;
+    
+    // Add padding to render grid beyond visible area (for smooth panning)
+    const padding = GRID_SPACING * 5;
+    const paddedStartX = startX - padding;
+    const paddedStartY = startY - padding;
+    const paddedEndX = endX + padding;
+    const paddedEndY = endY + padding;
+    
+    // Round to nearest grid line
+    const gridStartX = Math.floor(paddedStartX / GRID_SPACING) * GRID_SPACING;
+    const gridStartY = Math.floor(paddedStartY / GRID_SPACING) * GRID_SPACING;
+    const gridEndX = Math.ceil(paddedEndX / GRID_SPACING) * GRID_SPACING;
+    const gridEndY = Math.ceil(paddedEndY / GRID_SPACING) * GRID_SPACING;
+    
+    // Generate vertical grid lines
+    for (let x = gridStartX; x <= gridEndX; x += GRID_SPACING) {
       lines.push(
         <Line
-          key={`v-${i}`}
-          points={[i, 0, i, CANVAS_HEIGHT]}
-          stroke="#2a2a2a"
-          strokeWidth={1}
+          key={`v-${x}`}
+          points={[x, gridStartY, x, gridEndY]}
+          stroke={x === 0 ? "#444444" : "#2a2a2a"} // Highlight origin
+          strokeWidth={x === 0 ? 2 : 1}
           listening={false}
         />
       );
     }
     
-    for (let i = 0; i <= CANVAS_HEIGHT; i += GRID_SPACING) {
+    // Generate horizontal grid lines
+    for (let y = gridStartY; y <= gridEndY; y += GRID_SPACING) {
       lines.push(
         <Line
-          key={`h-${i}`}
-          points={[0, i, CANVAS_WIDTH, i]}
-          stroke="#2a2a2a"
-          strokeWidth={1}
+          key={`h-${y}`}
+          points={[gridStartX, y, gridEndX, y]}
+          stroke={y === 0 ? "#444444" : "#2a2a2a"} // Highlight origin
+          strokeWidth={y === 0 ? 2 : 1}
           listening={false}
         />
       );
     }
     
     return lines;
-  };
+  }, [dimensions, scale, gridUpdateTrigger]);
 
   // Show loading state while initial shapes load
   if (loading) {
@@ -1322,28 +1339,9 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
         onWheel={handleWheel}
         onClick={handleStageClick}
       >
-        {/* Background Layer */}
-        <Layer>
-          <Rect
-            x={0}
-            y={0}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            fill="#1a1a1a"
-            listening={false}
-          />
-          
+        {/* Background Layer - Infinite Grid */}
+        <Layer listening={false}>
           {generateGridLines()}
-          
-          <Rect
-            x={0}
-            y={0}
-            width={CANVAS_WIDTH}
-            height={CANVAS_HEIGHT}
-            stroke="#444444"
-            strokeWidth={2}
-            listening={false}
-          />
         </Layer>
 
         {/* Shapes Layer */}
