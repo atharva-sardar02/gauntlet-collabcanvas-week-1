@@ -1715,6 +1715,153 @@ Expected Result:
 
 ---
 
+## PR #15.5 — Layer Management & Z-Index Control
+
+**Rubric Section**: 3 (Tier-2 Advanced Features)  
+**Branch**: `feature/layer-management`  
+**Goal**: Implement comprehensive layer management system with z-index control
+
+### Overview:
+Add layer/z-index control to manage overlapping shapes. Users can bring shapes to front, send to back, and reorder layers with UI controls, keyboard shortcuts, and right-click context menu.
+
+### Tasks:
+
+- [x] **15.5.1: Add zIndex to Shape Interface**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Add `zIndex?: number` to Shape interface
+  - Files to update: `src/services/canvas.ts`
+  - Auto-assign zIndex when creating shapes (maxZIndex + 1)
+  - Ensure new shapes appear on top by default
+
+- [x] **15.5.2: Create Layer Management Utilities**
+  - Files to create: `src/utils/layers.ts`
+  - Function: `bringToFront(shapes, shapeId)` - set to max zIndex + 1
+  - Function: `sendToBack(shapes, shapeId)` - set to min zIndex - 1
+  - Function: `bringForward(shapes, shapeId)` - swap with shape above
+  - Function: `sendBackward(shapes, shapeId)` - swap with shape below
+  - Function: `getLayerPosition(shapes, shapeId)` - get current/total layer count
+  - Function: `normalizeZIndices(shapes)` - clean up gaps in zIndex values
+
+- [x] **15.5.3: Update Canvas Rendering for Z-Index**
+  - Files to update: `src/components/Canvas/Canvas.tsx`
+  - Sort shapes by zIndex before rendering: `shapes.sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0))`
+  - Use `useMemo` for sorted shapes to avoid re-sorting on every render
+  - Lower zIndex renders first (behind), higher zIndex renders last (in front)
+
+- [x] **15.5.4: Add Layer Methods to CanvasContext**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Add method: `bringShapeToFront(shapeId)` - bring to front
+  - Add method: `sendShapeToBack(shapeId)` - send to back
+  - Add method: `bringShapeForward(shapeId)` - move up one layer
+  - Add method: `sendShapeBackward(shapeId)` - move down one layer
+  - Add method: `getShapeLayerInfo(shapeId)` - get layer position info
+  - Each method calls utility function and updates shape in Firebase
+
+- [x] **15.5.5: Create LayerControls Component**
+  - Files to create: `src/components/Canvas/LayerControls.tsx`
+  - Add to Toolbox as "LAYERS" section
+  - Button: "↑↑ To Front" - bring to front
+  - Button: "↑ Forward" - bring forward one layer
+  - Button: "↓ Backward" - send backward one layer
+  - Button: "↓↓ To Back" - send to back
+  - Show layer position: "Layer X of Y"
+  - Enable only when shape is selected
+  - Disable buttons when at front/back limits
+  - Tooltips with keyboard shortcuts
+
+- [x] **15.5.6: Create Context Menu Component**
+  - Files to create: `src/components/Canvas/ContextMenu.tsx`
+  - Show on right-click on shape
+  - Menu items:
+    - "Bring to Front" (Ctrl/Cmd+Shift+])
+    - "Bring Forward" (Ctrl/Cmd+])
+    - "Send Backward" (Ctrl/Cmd+[)
+    - "Send to Back" (Ctrl/Cmd+Shift+[)
+    - Divider
+    - "Duplicate" (Ctrl/Cmd+D)
+    - "Delete" (Del)
+  - Position at mouse cursor
+  - Close on click outside or on action
+  - Styled with Tailwind
+
+- [x] **15.5.7: Integrate Context Menu in Canvas**
+  - Files to update: `src/components/Canvas/Canvas.tsx`
+  - Add state: `contextMenu: { x, y, shapeId } | null`
+  - Handle right-click on shapes: `onContextMenu` event
+  - Prevent default browser context menu
+  - Pass layer control handlers to ContextMenu
+  - Close menu on canvas click or action
+
+- [x] **15.5.8: Add Keyboard Shortcuts for Layers**
+  - Files to update: `src/hooks/useKeyboard.ts`
+  - Add shortcuts:
+    - `Ctrl/Cmd + ]` → Bring Forward
+    - `Ctrl/Cmd + [` → Send Backward
+    - `Ctrl/Cmd + Shift + ]` → Bring to Front
+    - `Ctrl/Cmd + Shift + [` → Send to Back
+  - Only active when shape is selected
+  - Prevent default browser behavior
+
+- [x] **15.5.9: Add Visual Feedback for Layers**
+  - Files to update: `src/components/Canvas/Canvas.tsx`
+  - Show layer position indicator when shape selected
+  - Display: "Layer 3 of 8" near selected shape or in toolbar
+  - Toast notifications for layer changes (optional):
+    - "Brought shape to front"
+    - "Moved shape forward"
+    - "Sent shape backward"
+    - "Sent shape to back"
+
+- [x] **15.5.10: Update Undo/Redo for Layer Changes**
+  - Files to update: `src/types/operations.ts`
+  - Add operation type: `'reorder'`
+  - Track before/after zIndex values
+  - Files to update: `src/components/Canvas/HistoryManager.tsx`
+  - Implement undo for reorder: restore old zIndex
+  - Implement redo for reorder: apply new zIndex
+  - Push operation on any layer change
+
+- [x] **15.5.11: Handle Locked Shapes**
+  - Files to update: `src/contexts/CanvasContext.tsx`
+  - Check if shape is locked before changing layer
+  - Show warning toast if trying to reorder locked shape
+  - Skip locked shapes in batch operations
+
+- [ ] **15.5.12: Test Collaborative Layer Management**
+  - Test scenarios:
+    - User A brings shape to front → User B sees it immediately
+    - Both users change layer simultaneously → Last-write-wins (conflict resolution)
+    - User A deletes shape while B is reordering → Shape disappears, no errors
+    - Undo/redo with multiple users → Each user's stack is independent
+    - Layer position indicator updates in real-time
+
+- [ ] **15.5.13: Add Unit Tests for Layer Utilities**
+  - Files to create: `tests/unit/utils/layers.test.ts`
+  - Test `bringToFront` - shape gets highest zIndex
+  - Test `sendToBack` - shape gets lowest zIndex
+  - Test `bringForward` - shape swaps with one above
+  - Test `sendBackward` - shape swaps with one below
+  - Test `getLayerPosition` - returns correct position
+  - Test `normalizeZIndices` - removes gaps
+  - Test edge cases: single shape, already at front/back
+
+### PR Checklist:
+- [ ] Shapes render in correct z-index order
+- [ ] Bring to front moves shape above all others
+- [ ] Send to back moves shape below all others
+- [ ] Bring forward/backward swap with adjacent shapes
+- [ ] Layer controls UI integrated in Toolbox
+- [ ] Context menu appears on right-click with layer options
+- [ ] Keyboard shortcuts work for all layer operations
+- [ ] Layer position indicator shows "Layer X of Y"
+- [ ] Undo/redo works for layer changes
+- [ ] Layer changes sync in real-time for all users
+- [ ] Locked shapes cannot be reordered
+- [ ] No conflicts with other canvas operations
+- [ ] Unit tests pass for all layer utilities
+
+---
+
 ## PR #16 — Component System: Instances & Sync
 
 **Rubric Section**: 3 (Tier-2 Advanced Features)  

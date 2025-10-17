@@ -139,6 +139,20 @@ export const useCanvas = () => {
     [currentUser]
   );
 
+  /**
+   * Clear all shapes from the canvas
+   */
+  const clearAllShapes = useCallback(async (): Promise<void> => {
+    try {
+      setError(null);
+      await canvasService.clearAllShapes();
+    } catch (err) {
+      console.error('Error clearing canvas:', err);
+      setError('Failed to clear canvas');
+      throw err;
+    }
+  }, []);
+
   return {
     shapes,
     loading,
@@ -149,6 +163,7 @@ export const useCanvas = () => {
     lockShape,
     unlockShape,
     recreateShape,
+    clearAllShapes,
   };
 };
 

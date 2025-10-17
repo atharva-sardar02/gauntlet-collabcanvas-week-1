@@ -14,6 +14,13 @@ import {
   distributeHorizontal,
   distributeVertical,
 } from '../utils/alignment';
+import {
+  bringToFront,
+  sendToBack,
+  bringForward,
+  sendBackward,
+  getLayerPosition,
+} from '../utils/layers';
 
 // Define the shape interface
 export interface Shape {
@@ -47,6 +54,8 @@ export interface Shape {
   version?: number;              // Increments on each edit
   lastModifiedTimestamp?: number; // Firestore server timestamp (milliseconds)
   editSessionId?: string;         // Unique ID for current edit session
+  // Layer management
+  zIndex?: number;                // Layer order (higher = in front)
 }
 
 // Define the Canvas Context interface
@@ -72,6 +81,14 @@ export interface CanvasContextType {
   recreateShape: (shape: Shape) => Promise<void>;
   alignShapes: (ids: string[], mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => Promise<void>;
   distributeShapes: (ids: string[], axis: 'horizontal' | 'vertical') => Promise<void>;
+  // Layer management
+  bringShapeToFront: (id: string) => Promise<void>;
+  sendShapeToBack: (id: string) => Promise<void>;
+  bringShapeForward: (id: string) => Promise<void>;
+  sendShapeBackward: (id: string) => Promise<void>;
+  getShapeLayerInfo: (id: string) => { current: number; total: number };
+  // Canvas management
+  clearAllShapes: () => Promise<void>;
 }
 
 // Create the context
@@ -106,6 +123,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     lockShape: lockShapeInFirebase,
     unlockShape: unlockShapeInFirebase,
     recreateShape: recreateShapeInFirebase,
+    clearAllShapes: clearAllShapesInFirebase,
   } = useCanvasHook();
 
   /**
@@ -441,6 +459,189 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     [shapes, updateShapeInFirebase]
   );
 
+  /**
+   * Layer Management Methods
+   */
+
+  /**
+   * Bring shape to front (highest zIndex)
+   * @param id - ID of shape to bring to front
+   */
+  const bringShapeToFront = useCallback(
+    async (id: string) => {
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return;
+
+      // Check if shape is locked
+      if (shape.isLocked) {
+        console.warn('Cannot reorder locked shape');
+        return;
+      }
+
+      const oldZIndex = shape.zIndex || 0;
+      const newZIndex = bringToFront(shapes, id);
+      
+      // Push operation to history
+      if (operationCallbackRef.current) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'reorder',
+          userId: currentUser?.uid || '',
+          timestamp: Date.now(),
+          shapeIds: [id],
+          before: { shapeData: { zIndex: oldZIndex } },
+          after: { shapeData: { zIndex: newZIndex } },
+          description: 'Brought shape to front',
+        });
+      }
+
+      await updateShapeInFirebase(id, { zIndex: newZIndex });
+    },
+    [shapes, updateShapeInFirebase, currentUser]
+  );
+
+  /**
+   * Send shape to back (lowest zIndex)
+   * @param id - ID of shape to send to back
+   */
+  const sendShapeToBack = useCallback(
+    async (id: string) => {
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return;
+
+      // Check if shape is locked
+      if (shape.isLocked) {
+        console.warn('Cannot reorder locked shape');
+        return;
+      }
+
+      const oldZIndex = shape.zIndex || 0;
+      const newZIndex = sendToBack(shapes, id);
+      
+      // Push operation to history
+      if (operationCallbackRef.current) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'reorder',
+          userId: currentUser?.uid || '',
+          timestamp: Date.now(),
+          shapeIds: [id],
+          before: { shapeData: { zIndex: oldZIndex } },
+          after: { shapeData: { zIndex: newZIndex } },
+          description: 'Sent shape to back',
+        });
+      }
+
+      await updateShapeInFirebase(id, { zIndex: newZIndex });
+    },
+    [shapes, updateShapeInFirebase, currentUser]
+  );
+
+  /**
+   * Bring shape forward one layer
+   * @param id - ID of shape to bring forward
+   */
+  const bringShapeForward = useCallback(
+    async (id: string) => {
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return;
+
+      // Check if shape is locked
+      if (shape.isLocked) {
+        console.warn('Cannot reorder locked shape');
+        return;
+      }
+
+      const oldZIndex = shape.zIndex || 0;
+      const newZIndex = bringForward(shapes, id);
+      if (newZIndex === null) {
+        // Already at front
+        return;
+      }
+      
+      // Push operation to history
+      if (operationCallbackRef.current) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'reorder',
+          userId: currentUser?.uid || '',
+          timestamp: Date.now(),
+          shapeIds: [id],
+          before: { shapeData: { zIndex: oldZIndex } },
+          after: { shapeData: { zIndex: newZIndex } },
+          description: 'Brought shape forward',
+        });
+      }
+
+      await updateShapeInFirebase(id, { zIndex: newZIndex });
+    },
+    [shapes, updateShapeInFirebase, currentUser]
+  );
+
+  /**
+   * Send shape backward one layer
+   * @param id - ID of shape to send backward
+   */
+  const sendShapeBackward = useCallback(
+    async (id: string) => {
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return;
+
+      // Check if shape is locked
+      if (shape.isLocked) {
+        console.warn('Cannot reorder locked shape');
+        return;
+      }
+
+      const oldZIndex = shape.zIndex || 0;
+      const newZIndex = sendBackward(shapes, id);
+      if (newZIndex === null) {
+        // Already at back
+        return;
+      }
+      
+      // Push operation to history
+      if (operationCallbackRef.current) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          type: 'reorder',
+          userId: currentUser?.uid || '',
+          timestamp: Date.now(),
+          shapeIds: [id],
+          before: { shapeData: { zIndex: oldZIndex } },
+          after: { shapeData: { zIndex: newZIndex } },
+          description: 'Sent shape backward',
+        });
+      }
+
+      await updateShapeInFirebase(id, { zIndex: newZIndex });
+    },
+    [shapes, updateShapeInFirebase, currentUser]
+  );
+
+  /**
+   * Get layer position info for a shape
+   * @param id - ID of shape
+   * @returns Object with current position and total layers
+   */
+  const getShapeLayerInfo = useCallback(
+    (id: string) => {
+      return getLayerPosition(shapes, id);
+    },
+    [shapes]
+  );
+
+  /**
+   * Clear all shapes from canvas
+   */
+  const clearAllShapes = useCallback(async () => {
+    await clearAllShapesInFirebase();
+    
+    // Clear selection
+    setSelectedId(null);
+    setSelectedIds([]);
+  }, [clearAllShapesInFirebase]);
+
   const value: CanvasContextType = {
     shapes,
     selectedId,
@@ -465,6 +666,14 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     recreateShape,
     alignShapes,
     distributeShapes,
+    // Layer management
+    bringShapeToFront,
+    sendShapeToBack,
+    bringShapeForward,
+    sendShapeBackward,
+    getShapeLayerInfo,
+    // Canvas management
+    clearAllShapes,
   };
 
   return (

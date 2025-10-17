@@ -84,6 +84,24 @@ const HistoryManager = () => {
           console.warn('Undo duplicate not fully implemented yet');
           break;
 
+        case 'reorder':
+          // Undo reorder by restoring previous zIndex
+          if (operation.before.shapeData && operation.shapeIds[0]) {
+            const shape = shapes.find(s => s.id === operation.shapeIds[0]);
+            
+            if (!shape) {
+              console.warn('Shape not found for undo reorder:', operation.shapeIds[0]);
+              return false;
+            }
+
+            // Restore the previous zIndex
+            const beforeZIndex = (operation.before.shapeData as any).zIndex;
+            if (beforeZIndex !== undefined) {
+              await updateShape(operation.shapeIds[0], { zIndex: beforeZIndex }, true); // skipHistory = true
+            }
+          }
+          break;
+
         default:
           console.warn('Unknown operation type for undo:', operation.type);
           return false;
@@ -158,6 +176,24 @@ const HistoryManager = () => {
         case 'duplicate':
           // Redo duplicate by creating the duplicate again
           console.warn('Redo duplicate not fully implemented yet');
+          break;
+
+        case 'reorder':
+          // Redo reorder by applying the new zIndex
+          if (operation.after.shapeData && operation.shapeIds[0]) {
+            const shape = shapes.find(s => s.id === operation.shapeIds[0]);
+            
+            if (!shape) {
+              console.warn('Shape not found for redo reorder:', operation.shapeIds[0]);
+              return false;
+            }
+
+            // Apply the new zIndex
+            const afterZIndex = (operation.after.shapeData as any).zIndex;
+            if (afterZIndex !== undefined) {
+              await updateShape(operation.shapeIds[0], { zIndex: afterZIndex }, true); // skipHistory = true
+            }
+          }
           break;
 
         default:

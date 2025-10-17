@@ -127,6 +127,12 @@ export const createShape = async (
 
     const now = Date.now();
     
+    // Calculate next zIndex (new shapes go on top)
+    const maxZIndex = shapes.length > 0 
+      ? Math.max(...shapes.map((s: Shape) => s.zIndex || 0), 0)
+      : 0;
+    const nextZIndex = maxZIndex + 1;
+    
     // Generate unique ID (prevents collisions even with simultaneous creates)
     // Format: shape-{timestamp}-{random9chars}
     // Collision probability: ~1 in 10^15 even at same millisecond
@@ -147,6 +153,8 @@ export const createShape = async (
       version: 1,
       lastModifiedTimestamp: now, // Will be replaced with server timestamp on sync
       editSessionId: `session-${userId}-${now}`,
+      // Layer management - new shapes on top
+      zIndex: nextZIndex,
     };
 
     await setDoc(
@@ -355,6 +363,27 @@ export const unlockShape = async (shapeId: string): Promise<void> => {
     });
   } catch (error) {
     console.error('Error unlocking shape:', error);
+    throw error;
+  }
+};
+
+/**
+ * Clear all shapes from the canvas
+ */
+export const clearAllShapes = async (): Promise<void> => {
+  try {
+    const canvasRef = doc(db, 'canvas', CANVAS_ID);
+    await setDoc(
+      canvasRef,
+      {
+        shapes: [],
+        lastUpdated: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    console.log('Canvas cleared successfully');
+  } catch (error) {
+    console.error('Error clearing canvas:', error);
     throw error;
   }
 };

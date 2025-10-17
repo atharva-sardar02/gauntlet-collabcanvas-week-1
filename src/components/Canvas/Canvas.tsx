@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useContext, useCallback } from 'react';
+import { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
 import { Stage, Layer, Rect, Line, Circle, Text, Star } from 'react-konva';
 import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
@@ -12,6 +12,7 @@ import HistoryManager from './HistoryManager';
 import TextEditor from './TextEditor';
 import ExportDialog, { type ExportScope, type PixelRatio } from './ExportDialog';
 import ExportToast, { type ExportToastMessage } from '../UI/ExportToast';
+import ContextMenu from './ContextMenu';
 import { exportCanvas, exportSelection, downloadDataURL, generateFilename, getDataURLSize } from '../../services/export';
 import { useCursors } from '../../hooks/useCursors';
 import { usePresence } from '../../hooks/usePresence';
@@ -45,7 +46,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes } = context;
+  const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
@@ -70,6 +71,9 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportToastMessage, setExportToastMessage] = useState<ExportToastMessage | null>(null);
   
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; shapeId: string } | null>(null);
+  
   // Force re-render when stage transforms (for cursor positioning)
   const [, setUpdateTrigger] = useState(0);
 
@@ -81,6 +85,14 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
 
   // Current user for presence list
   const { currentUser } = useAuth();
+
+  /**
+   * Sort shapes by zIndex for correct rendering order
+   * Lower zIndex renders first (behind), higher zIndex renders last (in front)
+   */
+  const sortedShapes = useMemo(() => {
+    return [...shapes].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+  }, [shapes]);
 
   /**
    * Show a toast notification
@@ -174,6 +186,76 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
     await distributeShapes(selectedIds, axis);
     showToast(`Distributed ${selectedIds.length} shapes ${axis}ly`, 'success');
   }, [selectedIds, distributeShapes, showToast]);
+
+  /**
+   * Layer Management Handlers
+   */
+  const handleBringToFront = useCallback(async () => {
+    if (!selectedId) return;
+    await bringShapeToFront(selectedId);
+    showToast('Brought shape to front', 'success');
+  }, [selectedId, bringShapeToFront, showToast]);
+
+  const handleSendToBack = useCallback(async () => {
+    if (!selectedId) return;
+    await sendShapeToBack(selectedId);
+    showToast('Sent shape to back', 'success');
+  }, [selectedId, sendShapeToBack, showToast]);
+
+  const handleBringForward = useCallback(async () => {
+    if (!selectedId) return;
+    await bringShapeForward(selectedId);
+    showToast('Brought shape forward', 'success');
+  }, [selectedId, bringShapeForward, showToast]);
+
+  const handleSendBackward = useCallback(async () => {
+    if (!selectedId) return;
+    await sendShapeBackward(selectedId);
+    showToast('Sent shape backward', 'success');
+  }, [selectedId, sendShapeBackward, showToast]);
+
+  /**
+   * Handle clear canvas with confirmation
+   */
+  const handleClearCanvas = useCallback(async () => {
+    if (shapes.length === 0) {
+      showToast('Canvas is already empty', 'info');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete all ${shapes.length} shape${shapes.length > 1 ? 's' : ''}? This action cannot be undone.`
+    );
+
+    if (confirmed) {
+      await clearAllShapes();
+      showToast('Canvas cleared', 'success');
+    }
+  }, [shapes.length, clearAllShapes, showToast]);
+
+  /**
+   * Handle context menu (right-click on shape)
+   */
+  const handleContextMenu = useCallback((e: Konva.KonvaEventObject<PointerEvent>, shapeId: string) => {
+    e.evt.preventDefault();
+    
+    // Select the shape
+    selectShape(shapeId);
+    
+    // Show context menu at cursor position
+    setContextMenu({
+      x: e.evt.clientX,
+      y: e.evt.clientY,
+      shapeId,
+    });
+  }, [selectShape]);
+
+  /**
+   * Close context menu
+   */
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
 
   /**
    * Handle arrow key nudging with repeat
@@ -480,6 +562,83 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       },
       description: 'Align Right (Cmd+Shift+R)',
     },
+    // Layer Management Shortcuts
+    {
+      key: ']',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleBringForward();
+      },
+      description: 'Bring Forward (Ctrl+])',
+    },
+    {
+      key: ']',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleBringForward();
+      },
+      description: 'Bring Forward (Cmd+])',
+    },
+    {
+      key: '[',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleSendBackward();
+      },
+      description: 'Send Backward (Ctrl+[)',
+    },
+    {
+      key: '[',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleSendBackward();
+      },
+      description: 'Send Backward (Cmd+[)',
+    },
+    {
+      key: ']',
+      ctrlKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleBringToFront();
+      },
+      description: 'Bring to Front (Ctrl+Shift+])',
+    },
+    {
+      key: ']',
+      metaKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleBringToFront();
+      },
+      description: 'Bring to Front (Cmd+Shift+])',
+    },
+    {
+      key: '[',
+      ctrlKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleSendToBack();
+      },
+      description: 'Send to Back (Ctrl+Shift+[)',
+    },
+    {
+      key: '[',
+      metaKey: true,
+      shiftKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleSendToBack();
+      },
+      description: 'Send to Back (Cmd+Shift+[)',
+    },
   ]);
 
   // Arrow key repeat for nudging
@@ -776,9 +935,14 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
   };
 
   /**
-   * Handle stage click to deselect shapes
+   * Handle stage click to deselect shapes and close context menu
    */
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Close context menu on any click
+    if (contextMenu) {
+      setContextMenu(null);
+    }
+    
     if (e.target === e.target.getStage()) {
       selectShape(null);
     }
@@ -1025,8 +1189,8 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
 
         {/* Shapes Layer */}
         <Layer>
-          {/* Render existing shapes */}
-          {shapes.map((shape) => (
+          {/* Render existing shapes sorted by zIndex */}
+          {sortedShapes.map((shape) => (
             <Shape
               key={shape.id}
               shape={shape}
@@ -1034,6 +1198,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
               onSelect={(e?: any) => handleShapeSelect(shape.id, e?.evt?.shiftKey)}
               onDragEnd={handleShapeDragEnd(shape.id)}
               onTransformEnd={handleShapeTransformEnd(shape.id)}
+              onContextMenu={(e) => handleContextMenu(e, shape.id)}
             />
           ))}
 
@@ -1119,7 +1284,7 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         </Layer>
       </Stage>
 
-      {/* Toolbox - includes drawing tools, history, and alignment */}
+      {/* Toolbox - includes drawing tools, history, alignment, and layers */}
       <Toolbox
         selectedTool={selectedTool}
         onSelectTool={setSelectedTool}
@@ -1130,6 +1295,13 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
         onAlign={handleAlign}
         onDistribute={handleDistribute}
         alignmentEnabled={selectedIds.length >= 2}
+        onBringToFront={handleBringToFront}
+        onSendToBack={handleSendToBack}
+        onBringForward={handleBringForward}
+        onSendBackward={handleSendBackward}
+        layerControlsEnabled={selectedId !== null}
+        layerInfo={selectedId ? getShapeLayerInfo(selectedId) : null}
+        onClearCanvas={handleClearCanvas}
       />
 
       {/* Canvas Controls */}
@@ -1213,6 +1385,27 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
           onCancel={() => setShowExportDialog(false)}
           hasSelection={selectedId !== null}
           isExporting={isExporting}
+        />
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={handleCloseContextMenu}
+          onBringToFront={() => handleBringToFront()}
+          onBringForward={() => handleBringForward()}
+          onSendBackward={() => handleSendBackward()}
+          onSendToBack={() => handleSendToBack()}
+          onDuplicate={() => handleDuplicate()}
+          onDelete={() => handleDelete()}
+          disabledOperations={{
+            bringToFront: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === getShapeLayerInfo(contextMenu.shapeId).total) : false,
+            sendToBack: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === 1) : false,
+            bringForward: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === getShapeLayerInfo(contextMenu.shapeId).total) : false,
+            sendBackward: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === 1) : false,
+          }}
         />
       )}
     </div>

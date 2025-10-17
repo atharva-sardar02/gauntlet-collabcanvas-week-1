@@ -14,6 +14,15 @@ interface ToolboxProps {
   onAlign?: (mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => void;
   onDistribute?: (axis: 'horizontal' | 'vertical') => void;
   alignmentEnabled?: boolean;
+  // Layer management
+  onBringToFront?: () => void;
+  onSendToBack?: () => void;
+  onBringForward?: () => void;
+  onSendBackward?: () => void;
+  layerControlsEnabled?: boolean;
+  layerInfo?: { current: number; total: number } | null;
+  // Canvas actions
+  onClearCanvas?: () => void;
 }
 
 const Toolbox = ({ 
@@ -26,6 +35,13 @@ const Toolbox = ({
   onAlign,
   onDistribute,
   alignmentEnabled = false,
+  onBringToFront,
+  onSendToBack,
+  onBringForward,
+  onSendBackward,
+  layerControlsEnabled = false,
+  layerInfo = null,
+  onClearCanvas,
 }: ToolboxProps) => {
   const tools = TOOLS;
   const [tooltip, setTooltip] = useState<string | null>(null);
@@ -237,6 +253,153 @@ const Toolbox = ({
         </>
       )}
 
+      {/* LAYERS SECTION */}
+      {(onBringToFront || onSendToBack || onBringForward || onSendBackward) && (
+        <>
+          <div className="mt-4 pt-3 border-t border-gray-700">
+            <div className="text-gray-400 text-xs font-semibold px-2 mb-2">
+              LAYERS {!layerControlsEnabled && <span className="text-gray-600 text-[10px] ml-1">(Select 1)</span>}
+            </div>
+            
+            {/* Layer position indicator */}
+            {layerInfo && layerControlsEnabled && (
+              <div className="text-gray-400 text-xs px-2 mb-2">
+                Layer {layerInfo.current} of {layerInfo.total}
+              </div>
+            )}
+            
+            {/* New Layout: Single layer (↑,↓) on left, Multi-layer (↑↑,↓↓) on right */}
+            <div className="grid grid-cols-2 gap-1.5">
+              {/* LEFT COLUMN - Single layer moves */}
+              <div className="flex flex-col gap-1.5">
+                {/* Bring Forward */}
+                <button
+                  onClick={onBringForward}
+                  disabled={!layerControlsEnabled}
+                  onMouseEnter={() => setTooltip('Forward')}
+                  onMouseLeave={() => setTooltip(null)}
+                  className={`
+                    group relative flex items-center justify-center h-9 rounded-lg
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Bring Forward"
+                >
+                  <div className="relative z-10 text-sm font-semibold">↑</div>
+                  
+                  {tooltip === 'Forward' && layerControlsEnabled && (
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                         style={{ zIndex: 10000 }}>
+                      <div>Bring Forward</div>
+                      <div className="text-gray-500 text-[10px] mt-0.5">
+                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+]</kbd>
+                      </div>
+                    </div>
+                  )}
+                </button>
+
+                {/* Send Backward */}
+                <button
+                  onClick={onSendBackward}
+                  disabled={!layerControlsEnabled}
+                  onMouseEnter={() => setTooltip('Backward')}
+                  onMouseLeave={() => setTooltip(null)}
+                  className={`
+                    group relative flex items-center justify-center h-9 rounded-lg
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Send Backward"
+                >
+                  <div className="relative z-10 text-sm font-semibold">↓</div>
+                  
+                  {tooltip === 'Backward' && layerControlsEnabled && (
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                         style={{ zIndex: 10000 }}>
+                      <div>Send Backward</div>
+                      <div className="text-gray-500 text-[10px] mt-0.5">
+                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+[</kbd>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* RIGHT COLUMN - Front/Back moves */}
+              <div className="flex flex-col gap-1.5">
+                {/* Bring to Front */}
+                <button
+                  onClick={onBringToFront}
+                  disabled={!layerControlsEnabled}
+                  onMouseEnter={() => setTooltip('To Front')}
+                  onMouseLeave={() => setTooltip(null)}
+                  className={`
+                    group relative flex items-center justify-center h-9 rounded-lg
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Bring to Front"
+                >
+                  <div className="relative z-10 text-sm font-semibold">↑↑</div>
+                  
+                  {tooltip === 'To Front' && layerControlsEnabled && (
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                         style={{ zIndex: 10000 }}>
+                      <div>Bring to Front</div>
+                      <div className="text-gray-500 text-[10px] mt-0.5">
+                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+]</kbd>
+                      </div>
+                    </div>
+                  )}
+                </button>
+
+                {/* Send to Back */}
+                <button
+                  onClick={onSendToBack}
+                  disabled={!layerControlsEnabled}
+                  onMouseEnter={() => setTooltip('To Back')}
+                  onMouseLeave={() => setTooltip(null)}
+                  className={`
+                    group relative flex items-center justify-center h-9 rounded-lg
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:scale-105'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Send to Back"
+                >
+                  <div className="relative z-10 text-sm font-semibold">↓↓</div>
+                  
+                  {tooltip === 'To Back' && layerControlsEnabled && (
+                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                         style={{ zIndex: 10000 }}>
+                      <div>Send to Back</div>
+                      <div className="text-gray-500 text-[10px] mt-0.5">
+                        <kbd className="bg-gray-800 px-1 rounded">Ctrl+Shift+[</kbd>
+                      </div>
+                    </div>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ALIGNMENT SECTION */}
       {(onAlign || onDistribute) && (
         <>
@@ -340,6 +503,31 @@ const Toolbox = ({
                 </button>
               ))}
             </div>
+          </div>
+        </>
+      )}
+
+      {/* CLEAR CANVAS BUTTON - At Bottom */}
+      {onClearCanvas && (
+        <>
+          <div className="mt-4 pt-3 border-t border-gray-700">
+            <button
+              onClick={onClearCanvas}
+              onMouseEnter={() => setTooltip('Clear Canvas')}
+              onMouseLeave={() => setTooltip(null)}
+              className="relative w-full px-3 py-2 text-sm font-semibold text-red-400 bg-red-900/20 hover:bg-red-900/40 rounded-lg transition-all duration-200 z-10 flex items-center justify-center gap-2"
+              title="Clear Canvas"
+            >
+              <span>🗑️</span>
+              <span>Clear Canvas</span>
+              
+              {tooltip === 'Clear Canvas' && (
+                <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                     style={{ zIndex: 10000 }}>
+                  Delete all shapes
+                </div>
+              )}
+            </button>
           </div>
         </>
       )}

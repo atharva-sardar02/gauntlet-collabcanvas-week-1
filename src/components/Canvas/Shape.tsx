@@ -11,9 +11,10 @@ interface ShapeProps {
   onSelect: () => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
+  onContextMenu?: (e: Konva.KonvaEventObject<PointerEvent>) => void;
 }
 
-const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: ShapeProps) => {
+const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onContextMenu }: ShapeProps) => {
   const context = useContext(CanvasContext);
   const { currentUser } = useAuth();
   const shapeRef = useRef<any>(null);
@@ -99,6 +100,7 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd }: Shape
     onTap: onSelect,
     onDragEnd: handleDragEnd,
     onTransformEnd: handleTransformEnd,
+    onContextMenu: onContextMenu,
     // Other shapes: solid border with glow
     // Text shapes: no border, no glow
     shadowBlur: isSelected && shape.type !== 'text' ? 5 : 0,

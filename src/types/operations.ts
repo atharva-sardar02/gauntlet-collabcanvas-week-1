@@ -16,7 +16,8 @@ export type OperationType =
   | 'delete' 
   | 'duplicate' 
   | 'transform'
-  | 'update';
+  | 'update'
+  | 'reorder';
 
 /**
  * State snapshot for before/after comparison
@@ -108,6 +109,8 @@ export const getOperationDescription = (operation: Operation): string => {
       return `Transformed ${count} shape${plural}`;
     case 'update':
       return `Updated ${count} shape${plural}`;
+    case 'reorder':
+      return `Reordered ${count} shape${plural}`;
     default:
       return `Modified ${count} shape${plural}`;
   }
