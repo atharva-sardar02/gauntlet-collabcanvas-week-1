@@ -90,12 +90,14 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     fill: shape.type === 'text' 
       ? (isSelected ? '#FFD700' : 'white')  // Yellow when selected, white when not
       : shape.fill,
-    // Other shapes: white border when selected
+    // Other shapes: white border when selected OR hovered (for translucent shapes)
     // Text: no border
-    stroke: isSelected && shape.type !== 'text'
+    stroke: (isSelected || isHovered) && shape.type !== 'text'
       ? 'white'
       : shape.isLocked ? shape.lockedByColor || '#ff0000' : undefined,
-    strokeWidth: isSelected && shape.type !== 'text' || shape.isLocked ? 2 : 0,
+    strokeWidth: (isSelected || isHovered) && shape.type !== 'text' || shape.isLocked 
+      ? 2 
+      : 0,
     draggable: !shape.isLocked,
     onClick: onSelect,
     onTap: onSelect,
@@ -195,15 +197,13 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
         {/* Show editor badge on hover or if recently edited (within 10 seconds) */}
         {editorName && shape.lastModifiedAt && (Date.now() - shape.lastModifiedAt < 10000) && (
           <Label
-            x={shape.x}
-            y={shape.y - 25}
+            x={shape.x + 5}
+            y={shape.y + 5}
             opacity={0.9}
           >
             <Tag
               fill="#1f2937"
-              pointerDirection="down"
-              pointerWidth={6}
-              pointerHeight={6}
+              pointerDirection=""
               lineJoin="round"
               shadowColor="black"
               shadowBlur={4}
@@ -211,10 +211,10 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
             />
             <Text
               text={`✏️ ${editorName}`}
-              fontSize={11}
+              fontSize={10}
               fontFamily="Arial"
               fill="white"
-              padding={6}
+              padding={4}
             />
           </Label>
         )}
