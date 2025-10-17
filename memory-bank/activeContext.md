@@ -1,10 +1,12 @@
 ## Active Context
 
 Current focus
-- Completed Layer Management system (PR #15.5) with z-index control
+- **Rubric Evaluation & Final Polish**
 - All core features deployed and operational
+- AI Canvas Agent fully implemented with AWS Lambda
+- Infinite canvas with dynamic grid rendering
 
-Recent changes (Latest Session - Oct 17, 2025)
+Recent changes (Latest Session - Oct 17, 2025 - Final)
 - **Layer Management (PR #15.5) ✅**:
   - Implemented z-index control for shape ordering
   - Created LayerControls in Toolbox with 2-column layout
@@ -38,27 +40,65 @@ Recent changes (Latest Session - Oct 17, 2025)
   - Multi-select support (Shift+Click)
   - Integrated into Toolbox with keyboard shortcuts
 
+Recent Major Implementations (Oct 17, 2025 Final Session)
+- **AI Canvas Agent (PR #19-21) ✅ COMPLETE**:
+  - AWS Lambda backend with LangChain + OpenAI
+  - 12 AI tools including bulk operations (bulkCreateShapes, createComplexLayout)
+  - Agent loop for complex multi-step commands (500+ shapes in one command)
+  - Command bar UI with Ctrl+/ shortcut, history, progress tracking
+  - Auto-navigation to created shapes
+  - Hybrid approach: LLM plans + server-side geometry computation
+- **Infinite Canvas ✅ COMPLETE**:
+  - Removed fixed 5000x5000 boundaries
+  - Dynamic viewport-based grid rendering
+  - Origin (0,0) highlighted with thicker lines
+  - Negative coordinates supported
+  - Smart export with bounding box calculation
+- **Multi-Selection Enhancements ✅ COMPLETE**:
+  - All actions work on multiple shapes (delete, duplicate, nudge, layer ops)
+  - Group transformer with bounding box for 2+ selected shapes
+  - Context menu shows selection count
+  - Distribution fix: works perfectly in one click
+- **Rotation Synchronization ✅ COMPLETE**:
+  - Rotation values saved to Firestore
+  - All users see synced rotations in real-time
+- **UI/UX Improvements ✅ COMPLETE**:
+  - AI Agent button in navbar (center, expandable)
+  - Online users dropdown with count
+  - User menu with conditional password change feature
+  - Movable, compact toolbox with toggle button
+  - Full-window layout (no browser scrollbars)
+  - Dark theme throughout (removed gradients)
+  - Better cursor contrast (WCAG compliant)
+  - Last edited marker (hidden for own edits)
+- **Documentation Organization ✅ COMPLETE**:
+  - Core docs moved to `docs/` folder (PRD, architecture, tasks)
+  - Root markdown files archived in `markdown-dump/`
+  - Deployment commands documented
+
 Next steps
-- **Implement AI Canvas Agent (PR #19-21)**:
-  - Backend: AWS Lambda with LangChain (NOT Firebase Functions)
-  - Frontend: Command bar UI (Ctrl+/)
-  - Architecture: Firebase Hosting → AWS API Gateway → Lambda → OpenAI
-  - Reason: Avoid Firebase Blaze plan requirement for external API calls
-- Continue with remaining advanced features (PR #16-18)
-- Test collaborative layer management across users
-- Add unit tests for layer utilities (PR #15.5.13)
-- Monitor performance with complex canvases
+- **Rubric Evaluation** - Assess against grading criteria
+- Demo video preparation
+- AI Development Log completion
+- Final testing and polish
+- Performance validation (500+ objects, 5+ users)
 
 Active decisions
-- History: 50 operation limit per stack (undo & redo), cleared on browser reload
-- Redo stack: Cleared on any new canvas change (unless it's a redo operation)
-- Shape coordinates: Top-left for rect/line/text/triangle, center for circle/star
-- Layer management: Explicit z-index control with normalized values
-- Hover effect: Local-only (not synced), 40% opacity with white border
-- Badge positioning: Top-left inside shape for proximity
-- Inactivity timeout: Users marked inactive after 60 seconds of no heartbeat
-- **AI Agent Backend**: Use AWS Lambda instead of Firebase Functions to avoid Blaze plan requirement
-- **AI Architecture**: Firebase Hosting → AWS API Gateway → Lambda (Node.js 20) → OpenAI via LangChain
+- **Canvas Architecture**: Infinite canvas (no boundaries), dynamic grid rendering based on viewport
+- **Canvas Export**: Smart bounding box calculation with 100px padding
+- **History**: 50 operation limit per stack (undo & redo), cleared on browser reload
+- **Redo stack**: Cleared on any new canvas change (unless it's a redo operation)
+- **Shape coordinates**: Top-left for rect/line/text/triangle, center for circle/star
+- **Rotation**: Stored in degrees, synced to Firestore for real-time collaboration
+- **Layer management**: Explicit z-index control with normalized values
+- **Multi-selection**: Group transformer for 2+ shapes, all operations affect all selected
+- **Hover effect**: Local-only (not synced), 40% opacity with white border
+- **Badge positioning**: Top-left inside shape, hidden for own edits
+- **Inactivity timeout**: Users marked inactive after 60 seconds of no heartbeat
+- **AI Agent Backend**: AWS Lambda with LangChain (not Firebase Functions to avoid Blaze plan)
+- **AI Architecture**: Firebase Hosting → AWS API Gateway → Lambda (Node.js 20) → OpenAI
 - **AI Security**: Firebase ID token verification + rate limiting (20 req/min) + idempotency caching
+- **AI Bulk Operations**: Server-side geometry computation for 100+ shapes, single Firestore write
+- **Distribution Algorithm**: Pre-calculate all positions in one pass for one-click distribution
 
 
