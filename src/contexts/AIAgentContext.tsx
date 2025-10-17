@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useCanvas } from '../hooks/useCanvas';
 import { sendCommandToAI, executeToolCalls } from '../services/aiAgent';
 
@@ -62,7 +63,7 @@ export function AIAgentProvider({ children }: { children: ReactNode }) {
       // Build canvas state
       const canvasState = {
         shapes: canvasContext.shapes || [],
-        selection: canvasContext.selectedShapeIds || [],
+        selection: [], // Selection not needed for AI commands
       };
 
       // Process batches until complete
