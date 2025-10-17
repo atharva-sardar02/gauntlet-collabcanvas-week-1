@@ -18,6 +18,7 @@ import { useCursors } from '../../hooks/useCursors';
 import { usePresence } from '../../hooks/usePresence';
 import { useAuth } from '../../hooks/useAuth';
 import { useKeyboard, useKeyRepeat } from '../../hooks/useKeyboard';
+import { useAIAgent } from '../../contexts/AIAgentContext';
 import {
   CANVAS_WIDTH,
   CANVAS_HEIGHT,
@@ -85,6 +86,9 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
 
   // Current user for presence list
   const { currentUser } = useAuth();
+
+  // AI Agent for command bar
+  const { openCommandBar } = useAIAgent();
 
   /**
    * Sort shapes by zIndex for correct rendering order
@@ -472,6 +476,24 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
       key: 'Escape',
       handler: handleEscape,
       description: 'Deselect shape',
+    },
+    {
+      key: '/',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        openCommandBar();
+      },
+      description: 'Open AI Command Bar (Ctrl+/)',
+    },
+    {
+      key: '/',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        openCommandBar();
+      },
+      description: 'Open AI Command Bar (Cmd+/)',
     },
     {
       key: 'v',

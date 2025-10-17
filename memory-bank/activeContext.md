@@ -39,7 +39,12 @@ Recent changes (Latest Session - Oct 17, 2025)
   - Integrated into Toolbox with keyboard shortcuts
 
 Next steps
-- Continue with remaining advanced features (PR #15+)
+- **Implement AI Canvas Agent (PR #19-21)**:
+  - Backend: AWS Lambda with LangChain (NOT Firebase Functions)
+  - Frontend: Command bar UI (Ctrl+/)
+  - Architecture: Firebase Hosting → AWS API Gateway → Lambda → OpenAI
+  - Reason: Avoid Firebase Blaze plan requirement for external API calls
+- Continue with remaining advanced features (PR #16-18)
 - Test collaborative layer management across users
 - Add unit tests for layer utilities (PR #15.5.13)
 - Monitor performance with complex canvases
@@ -52,5 +57,8 @@ Active decisions
 - Hover effect: Local-only (not synced), 40% opacity with white border
 - Badge positioning: Top-left inside shape for proximity
 - Inactivity timeout: Users marked inactive after 60 seconds of no heartbeat
+- **AI Agent Backend**: Use AWS Lambda instead of Firebase Functions to avoid Blaze plan requirement
+- **AI Architecture**: Firebase Hosting → AWS API Gateway → Lambda (Node.js 20) → OpenAI via LangChain
+- **AI Security**: Firebase ID token verification + rate limiting (20 req/min) + idempotency caching
 
 

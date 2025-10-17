@@ -6,6 +6,8 @@ import Navbar from './components/Layout/Navbar';
 import Canvas from './components/Canvas/Canvas';
 import { CanvasProvider } from './contexts/CanvasContext';
 import { HistoryProvider } from './contexts/HistoryContext';
+import { AIAgentProvider } from './contexts/AIAgentContext';
+import { CommandBar } from './components/Canvas/CommandBar';
 import { useAuth } from './hooks/useAuth';
 import './App.css';
 
@@ -27,12 +29,15 @@ const AuthenticatedApp = () => {
   return (
     <HistoryProvider userId={currentUser?.uid || null}>
       <CanvasProvider>
-        <div className="min-h-screen bg-gray-900 flex flex-col">
-          <Navbar onExport={exportHandler || undefined} hasShapes={hasShapes} />
-          <div className="flex-1 overflow-hidden">
-            <Canvas onExportRequest={handleExportRequest} />
+        <AIAgentProvider>
+          <div className="min-h-screen bg-gray-900 flex flex-col">
+            <Navbar onExport={exportHandler || undefined} hasShapes={hasShapes} />
+            <div className="flex-1 overflow-hidden">
+              <Canvas onExportRequest={handleExportRequest} />
+            </div>
           </div>
-        </div>
+          <CommandBar />
+        </AIAgentProvider>
       </CanvasProvider>
     </HistoryProvider>
   );

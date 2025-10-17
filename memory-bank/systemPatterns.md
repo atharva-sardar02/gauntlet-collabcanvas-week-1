@@ -93,6 +93,33 @@ Export Pattern
 - **Format**: PNG with transparent background
 - **UI**: Export button in Navbar with loading indicators
 
+AI Agent Pattern (AWS Lambda Architecture)
+- **Problem**: Firebase Functions require Blaze (paid) plan for external API calls (OpenAI)
+- **Solution**: Use AWS Lambda as serverless backend for AI agent
+- **Architecture**:
+  - Frontend (Firebase Hosting) → AWS API Gateway → Lambda (Node.js 20) → OpenAI
+  - Firebase ID token sent in Authorization header
+  - Lambda verifies token, calls OpenAI with LangChain, returns tool calls
+  - Frontend executes tool calls locally (canvas operations)
+- **Security**:
+  - Firebase token verification via firebase-admin
+  - OpenAI API key in AWS Secrets Manager (not in code)
+  - Rate limiting: 20 requests/minute per user
+  - Idempotency: Cache results by requestId (5 min TTL)
+  - CORS: Only allow Firebase Hosting origin
+- **Tools**: 10 AI-callable functions:
+  1. createShape (rectangle, circle, triangle, star)
+  2. moveShape
+  3. resizeShape
+  4. rotateShape
+  5. align (left, right, top, bottom, center-h, center-v)
+  6. distribute (horizontal, vertical)
+  7. createText
+  8. makeComponent (future)
+  9. instantiateComponent (future)
+  10. export (PNG)
+- **Cost**: ~$2/month (AWS: $0.50 + OpenAI GPT-3.5: $1.50) vs Firebase Blaze unknown costs
+
 Data model
 - Users: minimal profile for presence display.
 - Presence: ephemeral, user online state, cursor position, lastSeen timestamp.

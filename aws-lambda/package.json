@@ -1,0 +1,36 @@
+{
+  "name": "collabcanvas-ai-agent",
+  "version": "1.0.0",
+  "description": "AWS Lambda function for CollabCanvas AI agent with LangChain",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "deploy": "npm run build && cd dist && zip -r ../function.zip . && cd .. && aws lambda update-function-code --function-name collabcanvas-ai-agent --zip-file fileb://function.zip",
+    "deploy:create": "npm run build && cd dist && zip -r ../function.zip . && cd .. && aws lambda create-function --function-name collabcanvas-ai-agent --runtime nodejs20.x --role arn:aws:iam::YOUR-ACCOUNT-ID:role/lambda-execution-role --handler index.handler --zip-file fileb://function.zip --timeout 30 --memory-size 512",
+    "logs": "aws logs tail /aws/lambda/collabcanvas-ai-agent --follow"
+  },
+  "keywords": [
+    "lambda",
+    "langchain",
+    "openai",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.600.0",
+    "@langchain/core": "^0.2.0",
+    "@langchain/openai": "^0.2.0",
+    "firebase-admin": "^12.6.0",
+    "langchain": "^0.2.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.7.3"
+  }
+}
+
+

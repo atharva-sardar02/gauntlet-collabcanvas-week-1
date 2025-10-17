@@ -22,6 +22,17 @@ Local development
 - Node: use version compatible with Vite 7 and TypeScript 5.9
 - Scripts: dev, build, lint, preview (see package.json)
 
+AI Agent Stack (AWS Lambda)
+- Runtime: Node.js 20.x on AWS Lambda
+- LangChain: ^0.1.x (AI framework)
+- OpenAI: ^6.x (LLM provider)
+- Zod: ^4.x (schema validation)
+- firebase-admin: ^12.x (token verification)
+- @aws-sdk/client-secrets-manager: API key storage
+- Deployment: AWS Lambda + API Gateway (HTTP API)
+- Monitoring: CloudWatch Logs
+
 Constraints
 - Browser-based SPA; prioritize performance and real-time updates.
+- AI Agent: Use AWS Lambda to avoid Firebase Blaze plan requirement.
 

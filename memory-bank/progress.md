@@ -68,10 +68,14 @@ What works
   - 2-column layout for compact tool display
 
 What's left to build
+- **AI Canvas Agent (PR #19-21)** - IN PLANNING:
+  - Backend: AWS Lambda with LangChain (NOT Firebase Functions)
+  - 10 tool schemas (create, move, resize, rotate, align, distribute, text, components, export)
+  - Frontend: Command bar UI (Ctrl+/), command history, tool execution
+  - Architecture: Firebase Hosting → AWS API Gateway → Lambda → OpenAI
 - Multi-select marquee selection (PR #10)
 - Components system with master/instances (PR #15-17)
 - Comments & annotations (PR #18)
-- AI Canvas Agent (PR #19-21)
 - Performance optimization (PR #22)
 - Testing & CI (PR #25)
 - Collaborative layer management tests (PR #15.5.12)
