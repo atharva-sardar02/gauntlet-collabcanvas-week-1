@@ -2,6 +2,7 @@ import { createContext, useEffect, useState, type ReactNode } from 'react';
 import { type User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
 import * as authService from '../services/auth';
+import * as presenceService from '../services/presence';
 
 // Define the shape of our Auth Context
 export interface AuthContextType {
@@ -55,9 +56,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   /**
    * Sign out the current user
-   * Uses the auth service to handle Firebase operations
+   * Cleans up session data BEFORE signing out to avoid permission issues
    */
   const logout = async (): Promise<void> => {
+    // Clean up session data BEFORE signing out (while still authenticated)
+    if (currentUser) {
+      try {
+        await presenceService.cleanupUserSession(currentUser.uid);
+      } catch (error) {
+        console.error('Error cleaning up session:', error);
+        // Continue with logout even if cleanup fails
+      }
+    }
+    
+    // Now sign out
     await authService.signOut();
     // Auth state will be updated automatically by onAuthStateChanged listener
   };

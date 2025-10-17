@@ -46,8 +46,8 @@ export const usePresence = (userColor?: string) => {
       unsubscribe();
       clearInterval(heartbeatInterval);
       clearInterval(cleanupInterval);
-      // Set user as offline on unmount
-      presenceService.setUserOffline(currentUser.uid);
+      // Note: Session cleanup is handled in AuthContext logout function
+      // before the user is signed out, so no need to call setUserOffline here
     };
   }, [currentUser, myColor]);
 

@@ -43,13 +43,14 @@ export const useCursors = () => {
       setCursors(otherCursors);
     });
 
-    // Set up disconnect cleanup
+    // Set up disconnect cleanup (for network issues, crashes, etc.)
     cursorsService.setupDisconnectCleanup(currentUser.uid);
 
     return () => {
       unsubscribe();
-      // Clean up on unmount
-      cursorsService.removeCursor(currentUser.uid);
+      // Note: No need to call removeCursor here
+      // - On logout: cleanupUserSession in AuthContext handles it BEFORE signOut
+      // - On disconnect/crash: onDisconnect() handler marks as offline
     };
   }, [currentUser]);
 

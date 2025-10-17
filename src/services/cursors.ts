@@ -86,6 +86,11 @@ export const subscribeToCursors = (
         Object.keys(data).forEach((userId) => {
           const userData = data[userId];
           
+          // Skip users marked as offline (lastSeen = 0)
+          if (userData.lastSeen === 0) {
+            return;
+          }
+          
           // Filter out inactive users
           // If lastSeen is a server timestamp object, keep it (assume active)
           if (typeof userData.lastSeen === 'object') {
@@ -113,28 +118,40 @@ export const subscribeToCursors = (
 
 /**
  * Remove cursor when user disconnects
- * Sets up auto-cleanup on disconnect
+ * Marks as inactive instead of deleting to avoid permission issues
  * @param userId - User's ID
  */
 export const removeCursor = async (userId: string): Promise<void> => {
   try {
-    const cursorRef = ref(rtdb, `sessions/${CANVAS_ID}/${userId}`);
-    await set(cursorRef, null);
-  } catch (error) {
-    console.error('Error removing cursor:', error);
+    const cursorRef = ref(rtdb, `sessions/${CANVAS_ID}/${userId}/lastSeen`);
+    // Set lastSeen to 0 to mark as inactive (instead of deleting)
+    await set(cursorRef, 0);
+  } catch (error: any) {
+    // If this fails (user already logged out), it's okay
+    // The cleanup process will remove stale data
+    // Only log in development to avoid console noise
+    if (import.meta.env.DEV) {
+      console.log('Cursor removal - cleanup will handle it:', error.message);
+    }
   }
 };
 
 /**
  * Set up auto-cleanup on disconnect
+ * Only triggers on unexpected disconnects (network issues, crashes)
+ * Normal logout is handled by cleanupUserSession in AuthContext
  * @param userId - User's ID
  */
 export const setupDisconnectCleanup = (userId: string): void => {
-  const cursorRef = ref(rtdb, `sessions/${CANVAS_ID}/${userId}`);
+  const lastSeenRef = ref(rtdb, `sessions/${CANVAS_ID}/${userId}/lastSeen`);
   
-  // Automatically remove cursor when user disconnects
-  onDisconnect(cursorRef).set(null).catch((error) => {
-    console.error('Error setting up disconnect cleanup:', error);
+  // Mark as offline (lastSeen = 0) when user disconnects unexpectedly
+  // Cleanup process will remove the data later
+  onDisconnect(lastSeenRef).set(0).catch((error) => {
+    // Silently catch errors - this is expected on normal logout
+    if (import.meta.env.DEV) {
+      console.log('onDisconnect cursor cleanup:', error.message);
+    }
   });
 };
 
