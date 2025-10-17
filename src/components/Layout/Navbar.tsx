@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAIAgent } from '../../contexts/AIAgentContext';
 import { usePresence } from '../../hooks/usePresence';
+import ChangePasswordModal from '../Auth/ChangePasswordModal';
 
 interface NavbarProps {
   onExport?: () => void;
@@ -13,7 +14,15 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
   const { openCommandBar } = useAIAgent();
   const { onlineUsers } = usePresence();
   const [showUsersDropdown, setShowUsersDropdown] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  
+  // Check if user is using password authentication (not Google)
+  const isPasswordAuth = currentUser?.providerData.some(
+    provider => provider.providerId === 'password'
+  );
 
   const handleLogout = async () => {
     try {
@@ -23,22 +32,25 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
     }
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowUsersDropdown(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
     };
 
-    if (showUsersDropdown) {
+    if (showUsersDropdown || showUserMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showUsersDropdown]);
+  }, [showUsersDropdown, showUserMenu]);
 
   return (
     <nav className="bg-gray-900 shadow-xl border-b border-gray-800">
@@ -185,27 +197,111 @@ const Navbar = ({ onExport, hasShapes = false }: NavbarProps) => {
                 )}
               </div>
 
-              {/* User Display Name */}
-              <div className="flex items-center gap-3">
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-semibold shadow-lg">
-                  {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <span className="text-gray-200 font-medium hidden sm:block">
-                  {currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}
-                </span>
-              </div>
+              {/* User Menu Dropdown */}
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-3 hover:bg-gray-800 px-3 py-2 rounded-lg transition-all duration-200"
+                >
+                  <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-semibold shadow-lg">
+                    {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <span className="text-gray-200 font-medium hidden sm:block">
+                    {currentUser.displayName || currentUser.email?.split('@')[0] || 'User'}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 text-gray-400 transition-transform hidden sm:block ${showUserMenu ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
 
-              {/* Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-red-500/50 hover:scale-105"
-              >
-                Logout
-              </button>
+                {/* User Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-gray-800 rounded-lg shadow-2xl border border-gray-700 py-2 z-50">
+                    {/* User Info */}
+                    <div className="px-4 py-3 border-b border-gray-700">
+                      <p className="text-sm font-medium text-gray-200">
+                        {currentUser.displayName || 'User'}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1 truncate">
+                        {currentUser.email}
+                      </p>
+                    </div>
+
+                    {/* Menu Items */}
+                    <div className="py-1">
+                      {/* Change Password - Only for password auth users */}
+                      {isPasswordAuth && (
+                        <button
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            setShowChangePasswordModal(true);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700 transition-colors flex items-center gap-3"
+                        >
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                            />
+                          </svg>
+                          Change Password
+                        </button>
+                      )}
+
+                      {/* Logout */}
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          handleLogout();
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 transition-colors flex items-center gap-3"
+                      >
+                        <svg
+                          className="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                          />
+                        </svg>
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showChangePasswordModal}
+        onClose={() => setShowChangePasswordModal(false)}
+      />
     </nav>
   );
 };
