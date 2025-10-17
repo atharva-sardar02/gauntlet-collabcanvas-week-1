@@ -125,10 +125,14 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
         );
 
       case 'circle':
+        // Circle is centered, so we need to adjust position to match other shapes
+        const circleRadius = Math.min(shape.width, shape.height) / 2;
         return (
           <Circle
             {...commonProps}
-            radius={Math.min(shape.width, shape.height) / 2}
+            x={shape.x + shape.width / 2}  // Center the circle horizontally
+            y={shape.y + shape.height / 2}  // Center the circle vertically
+            radius={circleRadius}
           />
         );
 

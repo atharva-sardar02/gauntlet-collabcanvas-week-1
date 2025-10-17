@@ -984,9 +984,20 @@ const Canvas = ({ onExportRequest }: CanvasProps) => {
    */
   const handleShapeDragEnd = (id: string) => (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
+    const shape = shapes.find(s => s.id === id);
+    
+    let newX = node.x();
+    let newY = node.y();
+    
+    // Circle and Star shapes are rendered centered, so adjust position back to top-left
+    if (shape?.type === 'star' || shape?.type === 'circle') {
+      newX = node.x() - (shape.width / 2);
+      newY = node.y() - (shape.height / 2);
+    }
+    
     updateShape(id, {
-      x: node.x(),
-      y: node.y(),
+      x: newX,
+      y: newY,
     });
   };
 

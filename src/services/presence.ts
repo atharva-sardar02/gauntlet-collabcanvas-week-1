@@ -161,52 +161,18 @@ const filterActiveUsers = (users: OnlineUser[]): OnlineUser[] => {
 };
 
 /**
- * Clean up inactive users from the database
- * Removes users marked as offline (lastSeen = 0) or inactive for too long
- * @param userId - Current user's ID to keep them active
+ * DEPRECATED: Clean up inactive users from the database
+ * This function is no longer used because it violates Firebase security rules.
+ * Cleanup is now handled automatically by Firebase onDisconnect handlers.
+ * 
+ * Note: Inactive users are automatically removed when they disconnect via
+ * the onDisconnect handler set in setUserOnline(), which sets lastSeen to 0.
+ * The subscribeToPresence() function filters out these users client-side.
  */
-export const cleanupInactiveUsers = async (currentUserId: string): Promise<void> => {
-  try {
-    const presenceRef = ref(rtdb, `sessions/${CANVAS_ID}`);
-    const snapshot = await new Promise<any>((resolve, reject) => {
-      onValue(presenceRef, resolve, reject, { onlyOnce: true });
-    });
-
-    if (snapshot.exists()) {
-      const data = snapshot.val();
-      const now = Date.now();
-
-      for (const userId of Object.keys(data)) {
-        // Don't remove current user
-        if (userId === currentUserId) continue;
-
-        const lastSeen = data[userId].lastSeen;
-        
-        // Remove if marked as offline (lastSeen = 0)
-        if (lastSeen === 0) {
-          const userRef = ref(rtdb, `sessions/${CANVAS_ID}/${userId}`);
-          await set(userRef, null);
-          console.log(`Removed offline user: ${userId}`);
-          continue;
-        }
-        
-        // Only check if lastSeen is a number (not a server timestamp object)
-        if (typeof lastSeen === 'number') {
-          const timeSinceLastSeen = now - lastSeen;
-          
-          if (timeSinceLastSeen > INACTIVITY_TIMEOUT_MS) {
-            // Remove inactive user
-            const userRef = ref(rtdb, `sessions/${CANVAS_ID}/${userId}`);
-            await set(userRef, null);
-            console.log(`Removed inactive user: ${userId}`);
-          }
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error cleaning up inactive users:', error);
-  }
-};
+// export const cleanupInactiveUsers = async (currentUserId: string): Promise<void> => {
+//   // This function has been removed to prevent permission_denied errors
+//   // Cleanup is handled by Firebase onDisconnect handlers instead
+// };
 
 /**
  * Subscribe to presence updates with inactivity filtering

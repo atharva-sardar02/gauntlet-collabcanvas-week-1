@@ -2,10 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import * as presenceService from '../services/presence';
 import type { OnlineUser } from '../services/presence';
-import { 
-  HEARTBEAT_INTERVAL_MS, 
-  CLEANUP_INTERVAL_MS 
-} from '../services/presence';
+import { HEARTBEAT_INTERVAL_MS } from '../services/presence';
 import { getRandomCursorColor } from '../utils/constants';
 
 /**
@@ -37,15 +34,12 @@ export const usePresence = (userColor?: string) => {
       presenceService.updateHeartbeat(currentUser.uid);
     }, HEARTBEAT_INTERVAL_MS);
 
-    // Clean up inactive users at configured interval (default: 1 minute)
-    const cleanupInterval = setInterval(() => {
-      presenceService.cleanupInactiveUsers(currentUser.uid);
-    }, CLEANUP_INTERVAL_MS);
+    // Note: Inactive user cleanup is handled by Firebase onDisconnect handlers
+    // No need for manual cleanup that would violate security rules
 
     return () => {
       unsubscribe();
       clearInterval(heartbeatInterval);
-      clearInterval(cleanupInterval);
       // Note: Session cleanup is handled in AuthContext logout function
       // before the user is signed out, so no need to call setUserOffline here
     };
