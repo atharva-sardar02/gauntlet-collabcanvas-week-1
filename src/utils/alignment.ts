@@ -141,28 +141,49 @@ export const alignCenterVertical = (shapes: Shape[]): Map<string, { y: number }>
  * Distribute shapes horizontally with fixed 100px gap between edges
  * Gap from where one shape ends to where the next begins
  * Note: x is top-left corner (Konva default)
+ * @param shapes - Array of shapes to distribute
+ * @param alignVertically - If true, also aligns shapes to same vertical center (for straight row)
  */
-export const distributeHorizontal = (shapes: Shape[]): Map<string, { x: number }> => {
+export const distributeHorizontal = (shapes: Shape[], alignVertically: boolean = false): Map<string, { x: number } | { x: number; y: number }> => {
   if (shapes.length < 2) return new Map(); // Need at least 2 shapes
 
-  const updates = new Map<string, { x: number }>();
+  const updates = new Map<string, { x: number } | { x: number; y: number }>();
   const GAP = 100; // Fixed gap between shapes
   
   // Sort shapes by x position (left edge)
   const sorted = [...shapes].sort((a, b) => a.x - b.x);
+  
+  // Calculate vertical center alignment if requested
+  const avgY = alignVertically 
+    ? sorted.reduce((sum, s) => sum + (s.y + s.height / 2), 0) / sorted.length
+    : 0;
   
   // Calculate all positions in one pass based on current positions
   let currentX = sorted[0].x; // Start from the leftmost shape
   
   sorted.forEach((shape, index) => {
     if (index === 0) {
-      // First shape stays in place
+      if (alignVertically) {
+        // First shape: align vertically but keep X position
+        updates.set(shape.id, { 
+          x: shape.x,
+          y: avgY - shape.height / 2
+        });
+      }
+      // First shape stays in place (X only)
       currentX = shape.x + shape.width + GAP; // Set starting point for next shape
       return;
     }
     
     // Position this shape at currentX
-    updates.set(shape.id, { x: currentX });
+    if (alignVertically) {
+      updates.set(shape.id, { 
+        x: currentX,
+        y: avgY - shape.height / 2  // Center-align vertically for straight row
+      });
+    } else {
+      updates.set(shape.id, { x: currentX });
+    }
     
     // Update currentX for the next shape (this shape's right edge + gap)
     currentX = currentX + shape.width + GAP;
@@ -175,28 +196,49 @@ export const distributeHorizontal = (shapes: Shape[]): Map<string, { x: number }
  * Distribute shapes vertically with fixed 100px gap between edges
  * Gap from where one shape ends to where the next begins
  * Note: y is top-left corner (Konva default)
+ * @param shapes - Array of shapes to distribute
+ * @param alignHorizontally - If true, also aligns shapes to same horizontal center (for straight column)
  */
-export const distributeVertical = (shapes: Shape[]): Map<string, { y: number }> => {
+export const distributeVertical = (shapes: Shape[], alignHorizontally: boolean = false): Map<string, { y: number } | { x: number; y: number }> => {
   if (shapes.length < 2) return new Map(); // Need at least 2 shapes
 
-  const updates = new Map<string, { y: number }>();
+  const updates = new Map<string, { y: number } | { x: number; y: number }>();
   const GAP = 100; // Fixed gap between shapes
   
   // Sort shapes by y position (top edge)
   const sorted = [...shapes].sort((a, b) => a.y - b.y);
+  
+  // Calculate horizontal center alignment if requested
+  const avgX = alignHorizontally
+    ? sorted.reduce((sum, s) => sum + (s.x + s.width / 2), 0) / sorted.length
+    : 0;
   
   // Calculate all positions in one pass based on current positions
   let currentY = sorted[0].y; // Start from the topmost shape
   
   sorted.forEach((shape, index) => {
     if (index === 0) {
-      // First shape stays in place
+      if (alignHorizontally) {
+        // First shape: align horizontally but keep Y position
+        updates.set(shape.id, {
+          x: avgX - shape.width / 2,
+          y: shape.y
+        });
+      }
+      // First shape stays in place (Y only)
       currentY = shape.y + shape.height + GAP; // Set starting point for next shape
       return;
     }
     
     // Position this shape at currentY
-    updates.set(shape.id, { y: currentY });
+    if (alignHorizontally) {
+      updates.set(shape.id, {
+        x: avgX - shape.width / 2,  // Center-align horizontally for straight column
+        y: currentY
+      });
+    } else {
+      updates.set(shape.id, { y: currentY });
+    }
     
     // Update currentY for the next shape (this shape's bottom edge + gap)
     currentY = currentY + shape.height + GAP;

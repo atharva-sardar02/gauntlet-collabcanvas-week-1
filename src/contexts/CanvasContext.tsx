@@ -88,7 +88,7 @@ export interface CanvasContextType {
   setOperationCallback: (callback: ((operation: Operation) => void) | null) => void;
   recreateShape: (shape: Shape) => Promise<void>;
   alignShapes: (ids: string[], mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => Promise<void>;
-  distributeShapes: (ids: string[], axis: 'horizontal' | 'vertical') => Promise<void>;
+  distributeShapes: (ids: string[], axis: 'horizontal' | 'vertical', align?: boolean) => Promise<void>;
   // Layer management
   bringShapeToFront: (id: string) => Promise<void>;
   sendShapeToBack: (id: string) => Promise<void>;
@@ -453,9 +453,10 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    * Distribute shapes evenly
    * @param ids - Array of shape IDs to distribute
    * @param axis - Distribution axis
+   * @param align - If true, also aligns shapes perpendicularly (for straight rows/columns)
    */
   const distributeShapes = useCallback(
-    async (ids: string[], axis: 'horizontal' | 'vertical') => {
+    async (ids: string[], axis: 'horizontal' | 'vertical', align: boolean = false) => {
       if (ids.length < 3) return; // Need at least 3 shapes to distribute
 
       // Get shapes to distribute
@@ -471,8 +472,8 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
 
       // Calculate distribution updates
       const updates = axis === 'horizontal' 
-        ? distributeHorizontal(shapesToDistribute)
-        : distributeVertical(shapesToDistribute);
+        ? distributeHorizontal(shapesToDistribute, align)  // Pass align flag
+        : distributeVertical(shapesToDistribute, align);   // Pass align flag
 
       // Apply updates to all shapes
       for (const [shapeId, updateData] of updates.entries()) {

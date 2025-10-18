@@ -188,8 +188,9 @@ export async function executeToolCalls(
 
         case 'distribute':
           // distributeShapes expects array of shape IDs
+          // AI agent always creates straight rows/columns, so pass align=true
           if (args.ids.length >= 2) {
-            await canvasContext.distributeShapes(args.ids, args.axis);
+            await canvasContext.distributeShapes(args.ids, args.axis, true);
           }
           break;
 
