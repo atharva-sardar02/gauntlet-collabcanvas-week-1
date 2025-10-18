@@ -96,11 +96,11 @@ export function CommandBar() {
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-75 flex items-start justify-center pt-32 z-50"
+      className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
       onClick={closeCommandBar}
     >
       <div
-        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl mx-4 border border-gray-700"
+        className="bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-gray-700 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -225,11 +225,11 @@ export function CommandBar() {
         </form>
 
         {/* Two-Column Layout: Command Library (Left) + Recent History (Right) */}
-        <div className="border-t border-gray-700 bg-gray-900">
-          <div className="grid grid-cols-2 divide-x divide-gray-700">
+        <div className="border-t border-gray-700 bg-gray-900 overflow-y-auto flex-1">
+          <div className="grid grid-cols-2 divide-x divide-gray-700 h-full">
             
             {/* LEFT: Command Library */}
-            <div className="px-5 py-4 max-h-96 overflow-y-auto custom-scrollbar">
+            <div className="px-5 py-4 overflow-y-auto custom-scrollbar">
               <div className="flex items-center gap-2 mb-4">
                 <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -319,7 +319,7 @@ export function CommandBar() {
             </div>
 
             {/* RIGHT: Recent History */}
-            <div className="px-5 py-4 max-h-96 overflow-y-auto custom-scrollbar bg-gray-900 bg-opacity-40">
+            <div className="px-5 py-4 overflow-y-auto custom-scrollbar bg-gray-900 bg-opacity-40">
               <div className="flex items-center gap-2 mb-4">
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

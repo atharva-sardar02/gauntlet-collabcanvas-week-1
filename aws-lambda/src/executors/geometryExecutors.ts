@@ -308,66 +308,84 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
     }
 
     case 'card': {
-      // Card background
+      const cardWidth = 300;
+      const cardHeight = 450;
+      const padding = 20;
+
+      // Layer 1: Transparent shadow background (bottom-most)
       shapes.push({
         type: 'rectangle',
-        x,
-        y,
-        width: 300,
-        height: 400,
-        fill: backgroundColor,
-        stroke: '#E5E7EB',
+        x: x - 8,
+        y: y - 8,
+        width: cardWidth + 16,
+        height: cardHeight + 16,
+        fill: '#1F2937', // Dark gray shadow
+        opacity: 0.2,
       });
 
-      // Image placeholder
+      // Layer 2: Image placeholder
       shapes.push({
         type: 'rectangle',
-        x: x + 20,
-        y: y + 20,
-        width: 260,
-        height: 180,
-        fill: '#F3F4F6',
-        stroke: '#D1D5DB',
+        x: x,
+        y: y,
+        width: cardWidth,
+        height: 200,
+        fill: '#9CA3AF', // Gray placeholder
+        stroke: '#6B7280',
       });
 
-      // Title
+      // Layer 3: Image placeholder text
+      shapes.push({
+        type: 'text',
+        text: 'Image',
+        x: x + cardWidth / 2 - 30,
+        y: y + 90,
+        width: 60,
+        height: 20,
+        fontSize: 16,
+        fill: '#374151',
+      });
+
+      // Layer 4: Title
       shapes.push({
         type: 'text',
         text: config?.title || 'Card Title',
-        x: x + 20,
+        x: x + padding,
         y: y + 220,
-        width: 200,
+        width: 150,
         height: 30,
-        fontSize: 18,
+        fontSize: 20,
         fill: textColor,
       });
 
-      // Description lines
-      for (let i = 0; i < 3; i++) {
-        shapes.push({
-          type: 'rectangle',
-          x: x + 20,
-          y: y + 260 + i * 30,
-          width: 260,
-          height: 15,
-          fill: '#F3F4F6',
-        });
-      }
+      // Layer 5: Description text (placeholder)
+      shapes.push({
+        type: 'text',
+        text: 'This is a sample card description that explains the content. It provides context and additional information about the card.',
+        x: x + padding,
+        y: y + 260,
+        width: cardWidth - padding * 2,
+        height: 100,
+        fontSize: 14,
+        fill: '#6B7280', // Gray text
+      });
 
-      // Button
+      // Layer 6: Button
       shapes.push({
         type: 'rectangle',
-        x: x + 20,
-        y: y + 350,
-        width: 260,
-        height: 35,
+        x: x + padding,
+        y: y + cardHeight - 60,
+        width: cardWidth - padding * 2,
+        height: 40,
         fill: primaryColor,
       });
+
+      // Layer 7: Button text
       shapes.push({
         type: 'text',
         text: 'Learn More',
-        x: x + 110,
-        y: y + 362,
+        x: x + cardWidth / 2 - 40,
+        y: y + cardHeight - 47,
         width: 80,
         height: 20,
         fontSize: 14,
