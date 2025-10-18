@@ -9,9 +9,18 @@ interface NavbarProps {
   hasShapes?: boolean;
   isToolboxVisible?: boolean;
   onToggleToolbox?: () => void;
+  isLayersPanelVisible?: boolean;
+  onToggleLayersPanel?: () => void;
 }
 
-const Navbar = ({ onExport, hasShapes = false, isToolboxVisible = true, onToggleToolbox }: NavbarProps) => {
+const Navbar = ({ 
+  onExport, 
+  hasShapes = false, 
+  isToolboxVisible = true, 
+  onToggleToolbox,
+  isLayersPanelVisible = false,
+  onToggleLayersPanel 
+}: NavbarProps) => {
   const { currentUser, logout } = useAuth();
   const { openCommandBar } = useAIAgent();
   const { onlineUsers } = usePresence();
@@ -121,6 +130,34 @@ const Navbar = ({ onExport, hasShapes = false, isToolboxVisible = true, onToggle
                     />
                   </svg>
                   <span className="hidden sm:inline">Tools</span>
+                </button>
+              )}
+
+              {/* Layers Toggle Button */}
+              {onToggleLayersPanel && (
+                <button
+                  onClick={onToggleLayersPanel}
+                  className={`flex items-center gap-2 font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:scale-105 ${
+                    isLayersPanelVisible
+                      ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                      : 'bg-gray-800 hover:bg-gray-700 text-gray-400 border border-gray-700'
+                  }`}
+                  title={isLayersPanelVisible ? "Hide Layers" : "Show Layers"}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                    />
+                  </svg>
+                  <span className="hidden sm:inline">Layers</span>
                 </button>
               )}
 

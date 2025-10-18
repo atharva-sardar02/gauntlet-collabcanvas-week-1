@@ -22,6 +22,14 @@ import {
   getLayerPosition,
 } from '../utils/layers';
 
+/**
+ * Generate a default name for a shape
+ */
+function generateShapeName(type: string, index: number): string {
+  const typeName = type.charAt(0).toUpperCase() + type.slice(1);
+  return `${typeName} ${index}`;
+}
+
 // Define the shape interface
 export interface Shape {
   id: string;
@@ -31,6 +39,7 @@ export interface Shape {
   width: number;
   height: number;
   fill: string;
+  name?: string;                  // NEW: Editable shape name
   // Text-specific properties
   text?: string;
   fontSize?: number;
@@ -76,6 +85,7 @@ export interface CanvasContextType {
   addShape: (shape: Omit<Shape, 'id'>, skipHistory?: boolean) => Promise<void>;
   bulkAddShapes: (shapes: Array<Omit<Shape, 'id'>>) => Promise<void>;
   updateShape: (id: string, updates: Partial<Shape>, skipHistory?: boolean) => Promise<void>;
+  updateShapeName: (id: string, newName: string) => Promise<void>;  // NEW: Rename shape
   deleteShape: (id: string, skipHistory?: boolean) => Promise<void>;
   selectShape: (id: string | null) => void;
   selectShapes: (ids: string[]) => void;
@@ -141,12 +151,18 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    */
   const addShape = useCallback(
     async (shape: Omit<Shape, 'id'>, skipHistory = false) => {
-      const shapeId = await addShapeToFirebase(shape);
+      // Auto-generate name if not provided
+      const shapeWithName = {
+        ...shape,
+        name: shape.name || generateShapeName(shape.type, shapes.length + 1),
+      };
+      
+      const shapeId = await addShapeToFirebase(shapeWithName);
       
       // Track operation for undo/redo
       if (!skipHistory && operationCallbackRef.current && shapeId && currentUser) {
         const fullShape: Shape = {
-          ...shape,
+          ...shapeWithName,
           id: shapeId,
         } as Shape;
         
@@ -161,7 +177,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
         });
       }
     },
-    [addShapeToFirebase, currentUser]
+    [addShapeToFirebase, currentUser, shapes.length]
   );
 
   /**
@@ -171,11 +187,17 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
    */
   const bulkAddShapes = useCallback(
     async (shapesData: Array<Omit<Shape, 'id'>>) => {
-      await bulkAddShapesToFirebase(shapesData);
+      // Auto-generate names for shapes that don't have them
+      const shapesWithNames = shapesData.map((shape, index) => ({
+        ...shape,
+        name: shape.name || generateShapeName(shape.type, shapes.length + index + 1),
+      }));
+      
+      await bulkAddShapesToFirebase(shapesWithNames);
       // Note: Skipping undo/redo tracking for bulk operations
       // Too many operations would overwhelm the undo stack
     },
-    [bulkAddShapesToFirebase]
+    [bulkAddShapesToFirebase, shapes.length]
   );
 
   /**
@@ -202,6 +224,16 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
       }
     },
     [updateShapeInFirebase, shapes, currentUser]
+  );
+
+  /**
+   * Update shape name (convenience method)
+   */
+  const updateShapeName = useCallback(
+    async (id: string, newName: string) => {
+      await updateShape(id, { name: newName });
+    },
+    [updateShape]
   );
 
   /**
@@ -694,6 +726,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     addShape,
     bulkAddShapes,
     updateShape,
+    updateShapeName,  // NEW: Add to context
     deleteShape,
     selectShape,
     selectShapes,

@@ -24,6 +24,11 @@ const AuthenticatedApp = () => {
     const saved = localStorage.getItem('toolbox-visible');
     return saved ? JSON.parse(saved) : true;
   });
+  const [isLayersPanelVisible, setIsLayersPanelVisible] = useState(() => {
+    // Load from localStorage, default to false
+    const saved = localStorage.getItem('layers-panel-visible');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   // Callback to receive export handler from Canvas
   const handleExportRequest = (handler: () => void, hasShapesValue: boolean) => {
@@ -40,6 +45,15 @@ const AuthenticatedApp = () => {
     });
   };
 
+  // Toggle layers panel and save to localStorage
+  const toggleLayersPanel = () => {
+    setIsLayersPanelVisible((prev: boolean) => {
+      const newValue = !prev;
+      localStorage.setItem('layers-panel-visible', JSON.stringify(newValue));
+      return newValue;
+    });
+  };
+
   return (
     <HistoryProvider userId={currentUser?.uid || null}>
       <CanvasProvider>
@@ -50,11 +64,15 @@ const AuthenticatedApp = () => {
               hasShapes={hasShapes}
               isToolboxVisible={isToolboxVisible}
               onToggleToolbox={toggleToolbox}
+              isLayersPanelVisible={isLayersPanelVisible}
+              onToggleLayersPanel={toggleLayersPanel}
             />
             <div className="flex-1 overflow-hidden">
               <Canvas 
                 onExportRequest={handleExportRequest}
                 isToolboxVisible={isToolboxVisible}
+                isLayersPanelVisible={isLayersPanelVisible}
+                onCloseLayersPanel={() => setIsLayersPanelVisible(false)}
               />
             </div>
           </div>

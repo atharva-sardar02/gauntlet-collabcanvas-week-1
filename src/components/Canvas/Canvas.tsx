@@ -4,6 +4,7 @@ import Konva from 'konva';
 import CanvasContext from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
 import Toolbox from './Toolbox';
+import LayersPanel from './LayersPanel';
 import Shape from './Shape';
 import Cursor from '../Collaboration/Cursor';
 import ShortcutToast, { type ToastMessage } from '../UI/ShortcutToast';
@@ -35,9 +36,16 @@ import type { ToolType } from '../../utils/tools';
 interface CanvasProps {
   onExportRequest?: (handler: () => void, hasShapes: boolean) => void;
   isToolboxVisible?: boolean;
+  isLayersPanelVisible?: boolean;
+  onCloseLayersPanel?: () => void;
 }
 
-const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
+const Canvas = ({ 
+  onExportRequest, 
+  isToolboxVisible = true,
+  isLayersPanelVisible = false,
+  onCloseLayersPanel 
+}: CanvasProps) => {
   const context = useContext(CanvasContext);
   
   if (!context) {
@@ -51,6 +59,12 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   const [scale, setScale] = useState(DEFAULT_ZOOM);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
+  
+  // Calculate effective canvas dimensions (accounting for LayersPanel)
+  const LAYERS_PANEL_WIDTH = 256; // 64 * 4 (w-64 in Tailwind)
+  const effectiveWidth = isLayersPanelVisible 
+    ? dimensions.width - LAYERS_PANEL_WIDTH 
+    : dimensions.width;
   
   // Tool selection state
   const [selectedTool, setSelectedTool] = useState<ToolType>('select');
@@ -1243,7 +1257,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
     const lines = [];
     
     // Calculate visible area in canvas coordinates
-    const viewportWidth = dimensions.width;
+    const viewportWidth = effectiveWidth;
     const viewportHeight = dimensions.height;
     const stageX = stage.x();
     const stageY = stage.y();
@@ -1294,7 +1308,7 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
     }
     
     return lines;
-  }, [dimensions, scale, gridUpdateTrigger]);
+  }, [effectiveWidth, dimensions.height, scale, gridUpdateTrigger]);
 
   // Show loading state while initial shapes load
   if (loading) {
@@ -1321,13 +1335,15 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
   }
 
   return (
-    <div className="relative w-full bg-gray-900" style={{ height: dimensions.height }}>
-      {/* History Manager - handles undo/redo logic */}
-      <HistoryManager />
+    <div className="relative w-full bg-gray-900 flex" style={{ height: dimensions.height }}>
+      {/* Main Canvas Area */}
+      <div className="flex-1 relative">
+        {/* History Manager - handles undo/redo logic */}
+        <HistoryManager />
 
       <Stage
         ref={stageRef}
-        width={dimensions.width}
+        width={effectiveWidth}
         height={dimensions.height}
         x={initialX}
         y={initialY}
@@ -1588,6 +1604,12 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
             sendBackward: contextMenu.shapeId ? (getShapeLayerInfo(contextMenu.shapeId).current === 1) : false,
           }}
         />
+      )}
+      </div>
+
+      {/* Layers Panel - Right Side */}
+      {isLayersPanelVisible && onCloseLayersPanel && (
+        <LayersPanel onClose={onCloseLayersPanel} />
       )}
     </div>
   );
