@@ -11,6 +11,9 @@ interface ToolboxProps {
   onRedo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  // Edit actions
+  onDuplicate?: () => void;
+  onDelete?: () => void;
   // Alignment actions
   onAlign?: (mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => void;
   onDistribute?: (axis: 'horizontal' | 'vertical') => void;
@@ -39,6 +42,8 @@ const Toolbox = ({
   onRedo, 
   canUndo = false, 
   canRedo = false,
+  onDuplicate,
+  onDelete,
   onAlign,
   onDistribute,
   alignmentEnabled = false,
@@ -327,7 +332,7 @@ const Toolbox = ({
                   
                   <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
                        style={{ zIndex: 10000 }}>
-                    Undo
+                    Undo (Ctrl+Z)
                   </div>
                 </button>
               )}
@@ -353,7 +358,75 @@ const Toolbox = ({
                   
                   <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
                        style={{ zIndex: 10000 }}>
-                    Redo
+                    Redo (Ctrl+Shift+Z)
+                  </div>
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* EDIT SECTION */}
+      {(onDuplicate || onDelete) && (
+        <>
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
+              EDIT {!layerControlsEnabled && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
+            </div>
+            <div className="flex gap-1">
+              {onDuplicate && (
+                <button
+                  onClick={onDuplicate}
+                  disabled={!layerControlsEnabled}
+                  className={`
+                    group relative flex items-center justify-center flex-1 h-8 rounded
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Duplicate"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                  
+                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+                       style={{ zIndex: 10000 }}>
+                    Duplicate (Ctrl+D)
+                  </div>
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={onDelete}
+                  disabled={!layerControlsEnabled}
+                  className={`
+                    group relative flex items-center justify-center flex-1 h-8 rounded
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-red-900/30 text-red-400 hover:bg-red-900/50'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Delete"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/>
+                    <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                  
+                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+                       style={{ zIndex: 10000 }}>
+                    Delete (Del)
                   </div>
                 </button>
               )}

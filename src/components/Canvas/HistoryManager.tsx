@@ -79,9 +79,10 @@ const HistoryManager = () => {
 
         case 'duplicate':
           // Undo duplicate by deleting the duplicated shape
-          // Note: We'd need to track the new shape ID for this to work properly
-          // For now, this is a simplified implementation
-          console.warn('Undo duplicate not fully implemented yet');
+          // shapeIds[1] contains the ID of the duplicated shape
+          if (operation.shapeIds[1]) {
+            await deleteShape(operation.shapeIds[1], true); // skipHistory = true
+          }
           break;
 
         case 'reorder':
@@ -174,8 +175,10 @@ const HistoryManager = () => {
           break;
 
         case 'duplicate':
-          // Redo duplicate by creating the duplicate again
-          console.warn('Redo duplicate not fully implemented yet');
+          // Redo duplicate by recreating the duplicated shape
+          if (operation.after.shapeData) {
+            await recreateShape(operation.after.shapeData as any);
+          }
           break;
 
         case 'reorder':

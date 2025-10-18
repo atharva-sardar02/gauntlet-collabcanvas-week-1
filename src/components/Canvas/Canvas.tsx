@@ -1466,6 +1466,8 @@ const Canvas = ({ onExportRequest, isToolboxVisible = true }: CanvasProps) => {
         onRedo={handleRedo}
         canUndo={(window as any).__historyManager?.canUndo || false}
         canRedo={(window as any).__historyManager?.canRedo || false}
+        onDuplicate={handleDuplicate}
+        onDelete={handleDelete}
         onAlign={handleAlign}
         onDistribute={handleDistribute}
         alignmentEnabled={selectedIds.length >= 2}

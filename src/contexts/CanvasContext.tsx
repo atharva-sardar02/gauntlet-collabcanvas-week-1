@@ -303,7 +303,8 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
       const shape = shapes.find(s => s.id === id);
       if (!shape) return null;
 
-      // Clone the shape with a new ID and offset position
+      // Clone the shape with ALL properties (including rotation, opacity, blend mode, etc.)
+      // Filter out undefined values to avoid Firestore errors
       const duplicatedShape: Omit<Shape, 'id'> = {
         type: shape.type,
         x: shape.x + DUPLICATE_OFFSET,
@@ -311,27 +312,44 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
         width: shape.width,
         height: shape.height,
         fill: shape.fill,
+        // Metadata
         createdAt: Date.now(),
       };
 
-      await addShapeToFirebase(duplicatedShape);
+      // Only add optional properties if they exist
+      if (shape.rotation !== undefined) duplicatedShape.rotation = shape.rotation;
+      if (shape.scaleX !== undefined) duplicatedShape.scaleX = shape.scaleX;
+      if (shape.scaleY !== undefined) duplicatedShape.scaleY = shape.scaleY;
+      if (shape.opacity !== undefined) duplicatedShape.opacity = shape.opacity;
+      if (shape.blendMode !== undefined) duplicatedShape.blendMode = shape.blendMode;
       
-      // Track operation for history
-      if (!skipHistory && operationCallbackRef.current && currentUser) {
+      // Text properties
+      if (shape.text !== undefined) duplicatedShape.text = shape.text;
+      if (shape.fontSize !== undefined) duplicatedShape.fontSize = shape.fontSize;
+      if (shape.fontFamily !== undefined) duplicatedShape.fontFamily = shape.fontFamily;
+      if (shape.fontStyle !== undefined) duplicatedShape.fontStyle = shape.fontStyle;
+      if (shape.textDecoration !== undefined) duplicatedShape.textDecoration = shape.textDecoration;
+      
+      // Stroke
+      if ((shape as any).stroke !== undefined) (duplicatedShape as any).stroke = (shape as any).stroke;
+
+      // Create the duplicated shape and capture its ID
+      const newShapeId = await addShapeToFirebase(duplicatedShape);
+      
+      // Track operation for history (store BOTH original and new shape IDs)
+      if (!skipHistory && operationCallbackRef.current && currentUser && newShapeId) {
         operationCallbackRef.current({
           id: `op-${Date.now()}`,
           type: 'duplicate',
           userId: currentUser.uid,
           timestamp: Date.now(),
           before: { shapeData: shape },
-          after: { shapeData: duplicatedShape as Shape },
-          shapeIds: [id],
+          after: { shapeData: { ...duplicatedShape, id: newShapeId } as Shape },
+          shapeIds: [id, newShapeId], // [0] = original, [1] = duplicate
         });
       }
       
-      // Return a generated ID (in practice, this would come from Firebase)
-      // For now, we'll return a placeholder that the caller can use
-      return `shape-${Date.now()}-duplicated`;
+      return newShapeId;
     },
     [shapes, addShapeToFirebase, currentUser]
   );
