@@ -158,75 +158,109 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
 
   switch (type) {
     case 'login_form': {
-      // Title
+      const formWidth = 400;
+      const formHeight = 350;
+      const padding = 30;
+      
+      // Layer 1: Background window box with shadow (bottom-most)
       shapes.push({
-        type: 'text',
-        text: config?.title || 'Login',
-        x: x + 150,
-        y: y + 20,
-        width: 100,
-        height: 30,
-        fontSize: 24,
-        fill: textColor,
+        type: 'rectangle',
+        x: x - 10,
+        y: y - 10,
+        width: formWidth + 20,
+        height: formHeight + 20,
+        fill: '#1F2937', // Dark gray shadow
+        opacity: 0.3,
       });
-
+      
+      // Layer 2: Main window background
+      shapes.push({
+        type: 'rectangle',
+        x: x,
+        y: y,
+        width: formWidth,
+        height: formHeight,
+        fill: backgroundColor,
+        stroke: '#E5E7EB',
+      });
+      
+      // Layer 3: Input fields (middle layer)
       // Username field
       shapes.push({
         type: 'rectangle',
-        x: x + 50,
-        y: y + 60,
-        width: 300,
-        height: 40,
-        fill: backgroundColor,
+        x: x + padding,
+        y: y + 105,
+        width: formWidth - padding * 2,
+        height: 45,
+        fill: '#F9FAFB',
         stroke: '#D1D5DB',
-      });
-      shapes.push({
-        type: 'text',
-        text: 'Username',
-        x: x + 60,
-        y: y + 75,
-        width: 80,
-        height: 20,
-        fontSize: 14,
-        fill: '#6B7280',
       });
 
       // Password field
       shapes.push({
         type: 'rectangle',
-        x: x + 50,
-        y: y + 110,
-        width: 300,
-        height: 40,
-        fill: backgroundColor,
+        x: x + padding,
+        y: y + 190,
+        width: formWidth - padding * 2,
+        height: 45,
+        fill: '#F9FAFB',
         stroke: '#D1D5DB',
-      });
-      shapes.push({
-        type: 'text',
-        text: 'Password',
-        x: x + 60,
-        y: y + 125,
-        width: 80,
-        height: 20,
-        fontSize: 14,
-        fill: '#6B7280',
       });
 
       // Login button
       shapes.push({
         type: 'rectangle',
-        x: x + 50,
-        y: y + 170,
-        width: 300,
-        height: 45,
+        x: x + padding,
+        y: y + 260,
+        width: formWidth - padding * 2,
+        height: 50,
         fill: primaryColor,
       });
+      
+      // Layer 4: All text elements (top layer - added last for highest z-index)
+      // Title
       shapes.push({
         type: 'text',
-        text: 'Login',
-        x: x + 180,
-        y: y + 185,
-        width: 50,
+        text: config?.title || 'Welcome Back',
+        x: x + formWidth / 2 - 80,
+        y: y + padding,
+        width: 160,
+        height: 30,
+        fontSize: 28,
+        fill: '#111827', // Dark text for contrast
+      });
+      
+      // Username label
+      shapes.push({
+        type: 'text',
+        text: 'Username',
+        x: x + padding,
+        y: y + 80,
+        width: 80,
+        height: 20,
+        fontSize: 14,
+        fill: '#374151', // Dark gray
+      });
+      
+      // Password label
+      shapes.push({
+        type: 'text',
+        text: 'Password',
+        x: x + padding,
+        y: y + 165,
+        width: 80,
+        height: 20,
+        fontSize: 14,
+        fill: '#374151', // Dark gray
+      });
+      
+      // Button text (on top, contrasting)
+      shapes.push({
+        type: 'text',
+        text: 'Sign In',
+        x: x + formWidth / 2 - 40,
+        y: y + 275,
+        width: 80,
         height: 20,
         fontSize: 16,
         fill: '#FFFFFF',

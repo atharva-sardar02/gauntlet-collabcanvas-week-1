@@ -2,8 +2,16 @@ import { z } from 'zod';
 
 /**
  * Tool schemas for AI Canvas Agent
- * These define the 10 tools the AI can call to manipulate the canvas
+ * These define the tools the AI can call to manipulate the canvas
  */
+
+// 0. Get Shapes - Query existing shapes on the canvas
+export const getShapesSchema = z.object({
+  filter: z.object({
+    type: z.enum(['rectangle', 'circle', 'triangle', 'star', 'text']).optional().describe('Filter by shape type'),
+    fill: z.string().optional().describe('Filter by fill color (partial match)'),
+  }).optional().describe('Optional filters to narrow down results'),
+});
 
 // 1. Create Shape - Create rectangle, circle, triangle, or star
 export const createShapeSchema = z.object({
@@ -137,6 +145,7 @@ export const createComplexLayoutSchema = z.object({
 
 // Export all schemas
 export const toolSchemas = {
+  getShapes: getShapesSchema,
   createShape: createShapeSchema,
   moveShape: moveShapeSchema,
   resizeShape: resizeShapeSchema,
@@ -153,6 +162,7 @@ export const toolSchemas = {
 };
 
 // Type exports for TypeScript
+export type GetShapesArgs = z.infer<typeof getShapesSchema>;
 export type CreateShapeArgs = z.infer<typeof createShapeSchema>;
 export type MoveShapeArgs = z.infer<typeof moveShapeSchema>;
 export type ResizeShapeArgs = z.infer<typeof resizeShapeSchema>;

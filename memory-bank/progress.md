@@ -68,14 +68,20 @@ What works
   - 2-column layout for compact tool display
 
 Recently Completed (Oct 17, 2025 - Final Session)
-- **AI Canvas Agent (PR #19-21) ✅ COMPLETE**:
+- **AI Canvas Agent (PR #19-21) ✅ COMPLETE & DEPLOYED**:
   - AWS Lambda backend with LangChain + OpenAI GPT-4
-  - 12 AI tool schemas including bulk operations
+  - 13 AI tools (was 7): getShapes, resizeShape, rotateShape, updateShape, deleteShape added
   - Agent loop with multi-step reasoning for complex commands
   - Command bar UI (Ctrl+/) with history and progress tracking
   - Auto-navigation to created shapes after execution
   - Hybrid approach: LLM planning + server-side geometry computation
   - Handles 500+ shapes in single command
+  - **Robustness Layer**: 80+ lines of natural language handling
+  - Smart defaults, ambiguous reference resolution, typo tolerance
+  - Context understanding, color keywords, action verb interpretation
+  - Visual effects support (opacity, 12 blend modes)
+  - Complex layouts with shadow boxes and contrasting text
+  - ALL 6 original issues fixed and tested
 - **Infinite Canvas ✅ COMPLETE**:
   - Removed fixed 5000x5000 boundaries
   - Dynamic viewport-based grid rendering

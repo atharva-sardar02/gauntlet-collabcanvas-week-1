@@ -115,6 +115,12 @@ export async function executeToolCalls(
       console.log(`Executing tool: ${name}`, args);
 
       switch (name) {
+        case 'getShapes':
+          // This is a query tool used by the agent for reasoning
+          // No action needed on frontend - it doesn't modify the canvas
+          console.log('getShapes query executed by agent');
+          break;
+
         case 'createShape':
           const shapeData: any = {
             type: args.type,
@@ -123,6 +129,8 @@ export async function executeToolCalls(
             width: args.width,
             height: args.height,
             fill: args.fill || '#3B82F6',
+            opacity: args.opacity !== undefined ? args.opacity : 1,
+            blendMode: args.blendMode || 'source-over',
           };
           // Only add stroke if it's defined
           if (args.stroke) {
@@ -151,6 +159,21 @@ export async function executeToolCalls(
           });
           break;
 
+        case 'updateShape':
+          // Update shape properties (color, opacity, blend mode, etc.)
+          const updates: any = {};
+          if (args.fill) updates.fill = args.fill;
+          if (args.stroke) updates.stroke = args.stroke;
+          if (args.opacity !== undefined) updates.opacity = args.opacity;
+          if (args.blendMode) updates.blendMode = args.blendMode;
+          await canvasContext.updateShape(args.id, updates);
+          break;
+
+        case 'deleteShape':
+          // Delete an existing shape
+          await canvasContext.deleteShape(args.id);
+          break;
+
         case 'align':
           // alignShapes expects array of shape objects, not just IDs
           // We need to find the shapes by ID first
@@ -164,13 +187,9 @@ export async function executeToolCalls(
           break;
 
         case 'distribute':
-          // distributeShapes expects array of shape objects
-          const shapesToDistribute = args.ids
-            .map((id: string) => canvasContext.shapes.find((s: any) => s.id === id))
-            .filter(Boolean);
-          
-          if (shapesToDistribute.length >= 2) {
-            await canvasContext.distributeShapes(shapesToDistribute, args.axis);
+          // distributeShapes expects array of shape IDs
+          if (args.ids.length >= 2) {
+            await canvasContext.distributeShapes(args.ids, args.axis);
           }
           break;
 
@@ -214,6 +233,8 @@ export async function executeToolCalls(
               width: shape.width,
               height: shape.height,
               fill: shape.fill || '#3B82F6',
+              opacity: shape.opacity !== undefined ? shape.opacity : 1,
+              blendMode: shape.blendMode || 'source-over',
             };
             if (shape.stroke) {
               shapeData.stroke = shape.stroke;
@@ -242,6 +263,8 @@ export async function executeToolCalls(
               width: shape.width,
               height: shape.height,
               fill: shape.fill || '#3B82F6',
+              opacity: shape.opacity !== undefined ? shape.opacity : 1,
+              blendMode: shape.blendMode || 'source-over',
             };
             
             // Add text-specific properties
