@@ -44,7 +44,7 @@ const AuthenticatedApp = () => {
     <HistoryProvider userId={currentUser?.uid || null}>
       <CanvasProvider>
         <AIAgentProvider>
-          <div className="min-h-screen bg-gray-900 flex flex-col">
+          <div className="w-full h-full bg-gray-900 flex flex-col">
             <Navbar 
               onExport={exportHandler || undefined} 
               hasShapes={hasShapes}
