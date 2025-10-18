@@ -235,7 +235,7 @@ export async function executeAICommand(
     }),
     new DynamicStructuredTool({
       name: 'bulkCreateShapes',
-      description: 'EFFICIENT bulk shape creation - Use this for creating 10+ shapes in patterns (grid, row, column, circle, spiral). Creates up to 1000 shapes in <10ms. This is MUCH FASTER than calling createShape multiple times.',
+      description: 'EFFICIENT bulk shape creation - Use this for creating 10+ shapes in patterns (grid, row, column, circle, spiral). Creates up to 2000 shapes in <10ms. This is MUCH FASTER than calling createShape multiple times.',
       schema: toolSchemas.bulkCreateShapes,
       func: async (input: any) => {
         // Execute geometry computation immediately

@@ -103,7 +103,7 @@ export const exportSchema = z.object({
 export const bulkCreateShapesSchema = z.object({
   pattern: z.enum(['grid', 'row', 'column', 'circle', 'spiral']).describe('Layout pattern for shapes'),
   shape: z.enum(['rectangle', 'circle', 'ellipse', 'triangle', 'star']).describe('Shape type'),
-  count: z.number().positive().max(1000).describe('Number of shapes to create (max 1000)'),
+  count: z.number().positive().max(2000).describe('Number of shapes to create (max 2000)'),
   style: z.object({
     fill: z.string().optional().default('#3B82F6').describe('Fill color (hex)'),
     stroke: z.string().optional().describe('Stroke color (hex)'),
