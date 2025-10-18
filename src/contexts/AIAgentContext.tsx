@@ -1,6 +1,6 @@
 import { createContext, useContext, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useCanvas } from '../hooks/useCanvas';
+import CanvasContext from './CanvasContext';
 import { sendCommandToAI, executeToolCalls } from '../services/aiAgent';
 
 /**
@@ -31,7 +31,11 @@ export function AIAgentProvider({ children }: { children: ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<{ current: number; total: number; batchNumber: number } | null>(null);
-  const canvasContext = useCanvas();
+  const canvasContext = useContext(CanvasContext);
+
+  if (!canvasContext) {
+    throw new Error('AIAgentProvider must be used within a CanvasProvider');
+  }
 
   const openCommandBar = () => {
     setIsCommandBarOpen(true);

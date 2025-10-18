@@ -162,7 +162,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
       const formHeight = 350;
       const padding = 30;
       
-      // Layer 1: Background window box with shadow (bottom-most)
+      // Layer 1: Background shadow (bottom-most) - kept!
       shapes.push({
         type: 'rectangle',
         x: x - 10,
@@ -173,18 +173,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         opacity: 0.3,
       });
       
-      // Layer 2: Main window background
-      shapes.push({
-        type: 'rectangle',
-        x: x,
-        y: y,
-        width: formWidth,
-        height: formHeight,
-        fill: backgroundColor,
-        stroke: '#E5E7EB',
-      });
-      
-      // Layer 3: Input fields (middle layer)
+      // Layer 2: Input fields (middle layer)
       // Username field
       shapes.push({
         type: 'rectangle',
@@ -217,7 +206,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         fill: primaryColor,
       });
       
-      // Layer 4: All text elements (top layer - added last for highest z-index)
+      // Layer 3: All text elements (top layer - added last for highest z-index)
       // Title
       shapes.push({
         type: 'text',
