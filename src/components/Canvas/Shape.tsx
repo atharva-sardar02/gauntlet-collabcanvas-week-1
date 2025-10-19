@@ -9,13 +9,15 @@ interface ShapeProps {
   shape: ShapeType;
   isSelected: boolean;
   onSelect: () => void;
+  onDragStart?: (e: Konva.KonvaEventObject<DragEvent>) => void;
+  onDragMove?: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd?: (e: Konva.KonvaEventObject<Event>) => void;
   onContextMenu?: (e: Konva.KonvaEventObject<PointerEvent>) => void;
   hideTransformer?: boolean; // Hide individual transformer when using group transformer
 }
 
-const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onContextMenu, hideTransformer = false }: ShapeProps) => {
+const Shape = ({ shape, isSelected, onSelect, onDragStart, onDragMove, onDragEnd, onTransformEnd, onContextMenu, hideTransformer = false }: ShapeProps) => {
   const context = useContext(CanvasContext);
   const { currentUser } = useAuth();
   const shapeRef = useRef<any>(null);
@@ -62,6 +64,26 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     }
   }, [isSelected]);
 
+  const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // Don't allow dragging if shape is locked by another user
+    if (shape.isLocked && shape.lockedBy !== context?.stageRef?.current) {
+      return;
+    }
+    if (onDragStart) {
+      onDragStart(e);
+    }
+  };
+
+  const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+    // Don't allow dragging if shape is locked by another user
+    if (shape.isLocked && shape.lockedBy !== context?.stageRef?.current) {
+      return;
+    }
+    if (onDragMove) {
+      onDragMove(e);
+    }
+  };
+
   const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
     // Don't allow dragging if shape is locked by another user
     if (shape.isLocked && shape.lockedBy !== context?.stageRef?.current) {
@@ -100,6 +122,8 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     draggable: !shape.isLocked,
     onClick: onSelect,
     onTap: onSelect,
+    onDragStart: handleDragStart,
+    onDragMove: handleDragMove,
     onDragEnd: handleDragEnd,
     onTransformEnd: handleTransformEnd,
     onContextMenu: onContextMenu,

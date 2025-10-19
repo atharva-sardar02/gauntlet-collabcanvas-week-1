@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useContext, useCallback, useMemo } from 'react';
 import { Stage, Layer, Rect, Line, Circle, Text, Star, Transformer } from 'react-konva';
 import Konva from 'konva';
-import CanvasContext from '../../contexts/CanvasContext';
+import CanvasContext, { type Shape as ShapeType } from '../../contexts/CanvasContext';
 import CanvasControls from './CanvasControls';
 import Toolbox from './Toolbox';
 import LayersPanel from './LayersPanel';
@@ -52,13 +52,17 @@ const Canvas = ({
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, selectedIds, loading, error, hasClipboard, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes, updateShapeColor } = context;
+  const { shapes, selectedId, selectedIds, loading, error, hasClipboard, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes, updateShapeColor, batchUpdateShapes } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const multiSelectTransformerRef = useRef<Konva.Transformer>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
   const [scale, setScale] = useState(DEFAULT_ZOOM);
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
+  
+  // Track shape positions at drag start for multi-select
+  const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  const primaryDragShapeRef = useRef<string | null>(null); // Track which shape initiated the drag
   
   // Calculate effective canvas dimensions (accounting for LayersPanel)
   const LAYERS_PANEL_WIDTH = 256; // 64 * 4 (w-64 in Tailwind)
@@ -1240,31 +1244,180 @@ const Canvas = ({
   }, [updateShape]);
 
   /**
-   * Handle shape drag end - update shape position
+   * Handle shape drag start - store initial positions for multi-select
    */
-  const handleShapeDragEnd = (id: string) => (e: Konva.KonvaEventObject<DragEvent>) => {
+  const handleShapeDragStart = useCallback((id: string) => () => {
+    // If in multi-select mode, store initial positions of all selected shapes
+    if (selectedIds.length >= 2 && selectedIds.includes(id)) {
+      // Only set primary shape if not already set (prevents overwriting)
+      if (!primaryDragShapeRef.current) {
+        primaryDragShapeRef.current = id; // Mark this as the primary dragged shape
+        
+        const positions: Record<string, { x: number; y: number }> = {};
+        selectedIds.forEach(selectedId => {
+          const shape = shapes.find(s => s.id === selectedId);
+          if (shape) {
+            positions[selectedId] = { x: shape.x, y: shape.y };
+          }
+        });
+        dragStartPositionsRef.current = positions;
+      }
+    }
+  }, [selectedIds, shapes]);
+
+  /**
+   * Handle shape drag move - move all selected shapes together in real-time
+   * Updates Firestore with throttling to avoid flooding
+   */
+  const handleShapeDragMove = useCallback((id: string) => (e: Konva.KonvaEventObject<DragEvent>) => {
+    // Only handle multi-select dragging
+    if (selectedIds.length >= 2 && selectedIds.includes(id) && stageRef.current) {
+      // Only process if this is the primary drag shape
+      if (primaryDragShapeRef.current !== id) return;
+      
+      const node = e.target;
+      const shape = shapes.find(s => s.id === id);
+      if (!shape) return;
+
+      // Get the dragged shape's position
+      let draggedX = node.x();
+      let draggedY = node.y();
+      
+      // Adjust for center-based shapes
+      if (shape.type === 'star' || shape.type === 'circle') {
+        draggedX = node.x() - (shape.width / 2);
+        draggedY = node.y() - (shape.height / 2);
+      }
+
+      // Calculate delta from initial position
+      const initialPos = dragStartPositionsRef.current[id];
+      if (!initialPos) return;
+      
+      const deltaX = draggedX - initialPos.x;
+      const deltaY = draggedY - initialPos.y;
+
+      // Move all other selected shapes by the same delta (LOCAL update only)
+      const stage = stageRef.current;
+      selectedIds.forEach(selectedId => {
+        if (selectedId === id) return; // Skip the dragged shape itself
+        
+        const selectedShape = shapes.find(s => s.id === selectedId);
+        if (!selectedShape || selectedShape.isLocked) return;
+
+        const initialSelectedPos = dragStartPositionsRef.current[selectedId];
+        if (!initialSelectedPos) return;
+
+        // Find the node and update its position locally
+        const selectedNode = stage.findOne(`#${selectedId}`);
+        if (selectedNode) {
+          let newX = initialSelectedPos.x + deltaX;
+          let newY = initialSelectedPos.y + deltaY;
+          
+          // Adjust for center-based shapes
+          if (selectedShape.type === 'star' || selectedShape.type === 'circle') {
+            newX += selectedShape.width / 2;
+            newY += selectedShape.height / 2;
+          }
+          
+          selectedNode.position({ x: newX, y: newY });
+        }
+      });
+      
+      stage.batchDraw();
+      
+      // Note: We don't update Firestore during drag to avoid jitteriness
+      // All updates happen at drag end for smooth performance
+    }
+  }, [selectedIds, shapes]);
+
+  /**
+   * Handle shape drag end - final update of all shape positions in Firestore
+   * For multi-select: only the primary dragged shape updates all shapes
+   */
+  const handleShapeDragEnd = useCallback((id: string) => async (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target;
     const shape = shapes.find(s => s.id === id);
+    if (!shape) return;
     
     let newX = node.x();
     let newY = node.y();
     
     // Circle and Star shapes are rendered centered, so adjust position back to top-left
-    if (shape?.type === 'star' || shape?.type === 'circle') {
+    if (shape.type === 'star' || shape.type === 'circle') {
       newX = node.x() - (shape.width / 2);
       newY = node.y() - (shape.height / 2);
     }
     
-    updateShape(id, {
-      x: newX,
-      y: newY,
-    });
-  };
+    // Check if we're in multi-select mode (this shape is part of selected group)
+    if (selectedIds.length >= 2 && selectedIds.includes(id)) {
+      // Only the primary dragged shape should handle the update
+      if (primaryDragShapeRef.current !== id) {
+        return;
+      }
+      
+      try {
+        // Calculate delta from initial position
+        const initialPos = dragStartPositionsRef.current[id];
+        if (initialPos && stageRef.current) {
+          const stage = stageRef.current;
+          
+          // Get CURRENT positions from Konva nodes (not from state)
+          // This ensures we have the exact final positions
+          const updates = selectedIds.map(selectedId => {
+            const selectedShape = shapes.find(s => s.id === selectedId);
+            if (!selectedShape || selectedShape.isLocked) return null;
+            
+            const selectedNode = stage.findOne(`#${selectedId}`);
+            if (!selectedNode) return null;
+            
+            let finalX = selectedNode.x();
+            let finalY = selectedNode.y();
+            
+            // Adjust for center-based shapes
+            if (selectedShape.type === 'star' || selectedShape.type === 'circle') {
+              finalX = selectedNode.x() - (selectedShape.width / 2);
+              finalY = selectedNode.y() - (selectedShape.height / 2);
+            }
+            
+            return {
+              id: selectedId,
+              x: finalX,
+              y: finalY,
+            };
+          }).filter(u => u !== null);
+          
+          // Update all shapes in Firestore atomically in a single batch
+          const shapeUpdates = updates.map(u => ({
+            id: u!.id,
+            updates: { x: u!.x, y: u!.y }
+          }));
+          
+          await batchUpdateShapes(shapeUpdates);
+        }
+      } finally {
+        // Clear refs
+        dragStartPositionsRef.current = {};
+        primaryDragShapeRef.current = null;
+      }
+    } else {
+      // Single shape mode - just update this shape
+      await updateShape(id, {
+        x: newX,
+        y: newY,
+      });
+    }
+  }, [selectedIds, shapes, updateShape, batchUpdateShapes]);
 
   /**
    * Handle shape transform end - update shape size/rotation
+   * IMPORTANT: This should NOT fire when in multi-select mode (handled by multiSelectTransformEnd)
    */
   const handleShapeTransformEnd = useCallback((id: string) => (e: Konva.KonvaEventObject<Event>) => {
+    // Skip if in multi-select mode - the group transformer handles it
+    if (selectedIds.length >= 2 && selectedIds.includes(id)) {
+      return;
+    }
+    
     const node = e.target as Konva.Rect;
     const shape = shapes.find(s => s.id === id);
     const scaleX = node.scaleX();
@@ -1294,7 +1447,72 @@ const Canvas = ({
       height: newHeight,
       rotation, // Save rotation to Firestore
     });
-  }, [updateShape, shapes]);
+  }, [updateShape, shapes, selectedIds]);
+
+  /**
+   * Handle multi-select transformer end - update all selected shapes
+   * This fires when the transformer group is resized/rotated
+   * Properly scales shapes proportionally within the group
+   */
+  const handleMultiSelectTransformEnd = useCallback(async () => {
+    if (!multiSelectTransformerRef.current) return;
+    
+    const transformer = multiSelectTransformerRef.current;
+    const nodes = transformer.nodes();
+    if (nodes.length === 0) return;
+
+    // Prepare batch updates for all transformed shapes
+    const shapeUpdates = nodes.map((node) => {
+      const id = node.id();
+      const shape = shapes.find(s => s.id === id);
+      if (!shape || shape.isLocked) return null;
+
+      // Get the node's scale BEFORE we reset anything
+      const nodeScaleX = node.scaleX();
+      const nodeScaleY = node.scaleY();
+      const rotation = node.rotation();
+      const nodeWidth = node.width();
+      const nodeHeight = node.height();
+
+      // Calculate new dimensions by applying the scale to the NODE dimensions
+      const newWidth = Math.max(10, nodeWidth * nodeScaleX);
+      const newHeight = Math.max(10, nodeHeight * nodeScaleY);
+
+      // Get new position
+      let newX = node.x();
+      let newY = node.y();
+
+      // Adjust for center-based shapes
+      if (shape.type === 'star' || shape.type === 'circle') {
+        newX = node.x() - (newWidth / 2);
+        newY = node.y() - (newHeight / 2);
+      }
+
+      // Reset the node scale after we've read all values
+      node.scaleX(1);
+      node.scaleY(1);
+
+      return {
+        id,
+        updates: {
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight,
+          rotation,
+        }
+      };
+    }).filter(u => u !== null) as Array<{ id: string; updates: Partial<ShapeType> }>;
+    
+    // Reset transformer scale
+    transformer.scaleX(1);
+    transformer.scaleY(1);
+    
+    // Update all shapes using batch update
+    if (shapeUpdates.length > 0) {
+      await batchUpdateShapes(shapeUpdates);
+    }
+  }, [batchUpdateShapes, shapes, selectedIds]);
 
   /**
    * Reset view to initial position and zoom
@@ -1499,6 +1717,8 @@ const Canvas = ({
               shape={shape}
               isSelected={isShapeSelected(shape.id)}
               onSelect={(e?: any) => handleShapeSelect(shape.id, e?.evt?.shiftKey)}
+              onDragStart={handleShapeDragStart(shape.id)}
+              onDragMove={handleShapeDragMove(shape.id)}
               onDragEnd={handleShapeDragEnd(shape.id)}
               onTransformEnd={handleShapeTransformEnd(shape.id)}
               onContextMenu={(e) => handleContextMenu(e, shape.id)}
@@ -1590,6 +1810,7 @@ const Canvas = ({
           {selectedIds.length >= 2 && (
             <Transformer
               ref={multiSelectTransformerRef}
+              onTransformEnd={handleMultiSelectTransformEnd}
               boundBoxFunc={(oldBox, newBox) => {
                 // Limit resize to minimum size
                 if (newBox.width < 10 || newBox.height < 10) {

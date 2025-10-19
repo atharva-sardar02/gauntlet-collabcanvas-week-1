@@ -6,6 +6,7 @@ import {
   onSnapshot,
   serverTimestamp,
   enableIndexedDbPersistence,
+  getDocFromServer,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Shape } from '../contexts/CanvasContext';
@@ -314,7 +315,7 @@ export const updateShape = async (
             lastModifiedAt: now,
             // Increment version for conflict detection
             version: (shape.version || 0) + 1,
-            lastModifiedTimestamp: now, // Will be replaced with server timestamp on sync
+            lastModifiedTimestamp: now,
             editSessionId: `session-${userId}-${now}`,
           }
         : shape
@@ -326,6 +327,65 @@ export const updateShape = async (
     });
   } catch (error) {
     console.error('Error updating shape:', error);
+    throw error;
+  }
+};
+
+/**
+ * Batch update multiple shapes atomically in a single transaction
+ * Prevents race conditions when updating multiple shapes simultaneously
+ * @param shapeUpdates - Array of shape IDs and their updates
+ * @param userId - User making the updates
+ * @param userName - User's display name
+ */
+export const batchUpdateShapes = async (
+  shapeUpdates: Array<{ id: string; updates: Partial<Shape> }>,
+  userId: string,
+  userName?: string
+): Promise<void> => {
+  try {
+    const canvasRef = doc(db, 'canvas', CANVAS_ID);
+    
+    // Read from SERVER not cache to get latest data
+    const snapshot = await getDocFromServer(canvasRef);
+    
+    if (!snapshot.exists()) {
+      console.error('[Batch Update] Canvas document does not exist');
+      return;
+    }
+    
+    const shapes = snapshot.data().shapes || [];
+    const now = Date.now();
+    
+    // Create a map of shape IDs to updates for O(1) lookup
+    const updatesMap = new Map(shapeUpdates.map(su => [su.id, su.updates]));
+    
+    // Update all shapes that have updates
+    const updatedShapes = shapes.map((shape: Shape) => {
+      const updates = updatesMap.get(shape.id);
+      if (updates) {
+        return {
+          ...shape,
+          ...updates,
+          lastModifiedBy: userId,
+          lastModifiedByName: userName,
+          lastModifiedAt: now,
+          version: (shape.version || 0) + 1,
+          lastModifiedTimestamp: now,
+          editSessionId: `session-${userId}-${now}`,
+        };
+      }
+      return shape;
+    });
+    
+    // Write all updates in one go
+    await setDoc(canvasRef, {
+      canvasId: CANVAS_ID,
+      shapes: updatedShapes,
+      lastUpdated: serverTimestamp(),
+    }, { merge: false });
+  } catch (error) {
+    console.error('Error batch updating shapes:', error);
     throw error;
   }
 };

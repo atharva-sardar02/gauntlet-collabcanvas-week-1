@@ -104,6 +104,28 @@ export const useCanvas = () => {
   );
 
   /**
+   * Batch update multiple shapes atomically
+   */
+  const batchUpdateShapes = useCallback(
+    async (shapeUpdates: Array<{ id: string; updates: Partial<Shape> }>) => {
+      if (!currentUser) {
+        setError('User not authenticated');
+        return;
+      }
+
+      try {
+        setError(null);
+        const userName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+        await canvasService.batchUpdateShapes(shapeUpdates, currentUser.uid, userName);
+      } catch (err) {
+        console.error('Error batch updating shapes:', err);
+        setError('Failed to batch update shapes');
+      }
+    },
+    [currentUser]
+  );
+
+  /**
    * Delete a shape from the canvas
    */
   const deleteShape = useCallback(async (shapeId: string) => {
@@ -186,6 +208,7 @@ export const useCanvas = () => {
     addShape,
     bulkAddShapes,
     updateShape,
+    batchUpdateShapes,
     deleteShape,
     lockShape,
     unlockShape,

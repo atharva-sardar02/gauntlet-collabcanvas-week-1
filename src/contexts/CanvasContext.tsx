@@ -100,6 +100,7 @@ export interface CanvasContextType {
   copyShapes: (ids: string[]) => void;  // NEW: Copy shapes to clipboard
   cutShapes: (ids: string[]) => Promise<void>;  // NEW: Cut shapes to clipboard (copy + delete)
   pasteShapes: (cursorX?: number, cursorY?: number) => Promise<string[]>;  // NEW: Paste shapes at cursor position
+  batchUpdateShapes: (shapeUpdates: Array<{ id: string; updates: Partial<Shape> }>) => Promise<void>;  // NEW: Batch update shapes atomically
   setOperationCallback: (callback: ((operation: Operation) => void) | null) => void;
   recreateShape: (shape: Shape) => Promise<void>;
   alignShapes: (ids: string[], mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => Promise<void>;
@@ -144,6 +145,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     addShape: addShapeToFirebase,
     bulkAddShapes: bulkAddShapesToFirebase,
     updateShape: updateShapeInFirebase,
+    batchUpdateShapes: batchUpdateShapesInFirebase,
     deleteShape: deleteShapeFromFirebase,
     lockShape: lockShapeInFirebase,
     unlockShape: unlockShapeInFirebase,
@@ -723,6 +725,16 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
   }, [clearAllShapesInFirebase]);
 
   /**
+   * Batch update multiple shapes atomically
+   */
+  const batchUpdateShapes = useCallback(
+    async (shapeUpdates: Array<{ id: string; updates: Partial<Shape> }>) => {
+      await batchUpdateShapesInFirebase(shapeUpdates);
+    },
+    [batchUpdateShapesInFirebase]
+  );
+
+  /**
    * Update color of multiple shapes
    * Used by color picker to apply color to selected shapes
    */
@@ -733,12 +745,11 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
         updates.opacity = opacity;
       }
 
-      // Update all shapes
-      for (const id of shapeIds) {
-        await updateShape(id, updates, false);
-      }
+      // Use batch update for multiple shapes
+      const shapeUpdates = shapeIds.map(id => ({ id, updates }));
+      await batchUpdateShapes(shapeUpdates);
     },
-    [updateShape]
+    [batchUpdateShapes]
   );
 
   /**
@@ -898,6 +909,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     copyShapes,  // NEW: Copy to clipboard
     cutShapes,   // NEW: Cut to clipboard
     pasteShapes, // NEW: Paste from clipboard
+    batchUpdateShapes,  // NEW: Batch update shapes
     setOperationCallback: useCallback((callback) => {
       operationCallbackRef.current = callback;
     }, []),
