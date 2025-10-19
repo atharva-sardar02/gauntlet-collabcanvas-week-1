@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { TOOLS } from '../../utils/tools';
 import type { ToolType } from '../../utils/tools';
 import type { Shape } from '../../contexts/CanvasContext';
+import { ColorPicker } from './ColorPicker/ColorPicker';
+import { useRecentColors } from '../../hooks/useRecentColors';
 
 interface ToolboxProps {
   selectedTool: ToolType;
@@ -14,6 +16,7 @@ interface ToolboxProps {
   // Edit actions
   onDuplicate?: () => void;
   onDelete?: () => void;
+  onUpdateColor?: (color: string, opacity: number) => void; // Color picker
   // Alignment actions
   onAlign?: (mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => void;
   onDistribute?: (axis: 'horizontal' | 'vertical') => void;
@@ -44,6 +47,7 @@ const Toolbox = ({
   canRedo = false,
   onDuplicate,
   onDelete,
+  onUpdateColor,
   onAlign,
   onDistribute,
   alignmentEnabled = false,
@@ -64,6 +68,32 @@ const Toolbox = ({
   const effectiveShape = isMultiSelect ? selectedShapes[0] : selectedShape; // Use first shape as reference for multi-select
   const tools = TOOLS;
   const [tooltip, setTooltip] = useState<string | null>(null);
+  
+  // Color picker state
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [currentColor, setCurrentColor] = useState(effectiveShape?.fill || '#3B82F6');
+  const { addRecentColor } = useRecentColors();
+  const lastShapeIdRef = useRef<string | null>(null);
+  
+  // Update current color only when a different shape is selected
+  useEffect(() => {
+    const currentShapeId = effectiveShape?.id || null;
+    if (currentShapeId !== lastShapeIdRef.current) {
+      if (effectiveShape?.fill) {
+        setCurrentColor(effectiveShape.fill);
+      }
+      lastShapeIdRef.current = currentShapeId;
+    }
+  }, [effectiveShape?.id, effectiveShape?.fill]);
+  
+  const handleColorChange = (color: string, opacity: number) => {
+    setCurrentColor(color);
+    addRecentColor(color);
+    
+    if (onUpdateColor) {
+      onUpdateColor(color, opacity);
+    }
+  };
   
   // Draggable state
   const [position, setPosition] = useState(() => {
@@ -243,13 +273,11 @@ const Toolbox = ({
         top: `${position.y}px`,
         cursor: isDragging ? 'grabbing' : 'default',
         maxHeight: '90vh',
-        overflowY: effectiveShape ? 'auto' : 'hidden', // Allow vertical scrolling only when Visual Effects are shown
-        overflowX: 'hidden', // Never allow horizontal scroll
+        overflowY: 'auto',
+        overflowX: 'hidden',
         // Custom scrollbar styling for dark theme (Firefox)
-        ...(effectiveShape && {
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#4B5563 #1F2937',
-        }),
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#4B5563 #1F2937',
       }}
     >
       {/* Drag Handle Header */}
@@ -280,7 +308,7 @@ const Toolbox = ({
               key={tool.id}
               onClick={() => onSelectTool(tool.id)}
               className={`
-                group relative flex items-center justify-center w-10 h-8 rounded
+                group relative flex items-center justify-center h-8 rounded
                 transition-all duration-200 z-10
                 ${
                   selectedTool === tool.id
@@ -309,13 +337,13 @@ const Toolbox = ({
             <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
               HISTORY
             </div>
-            <div className="flex gap-1">
+            <div className="grid grid-cols-2 gap-1">
               {onUndo && (
                 <button
                   onClick={onUndo}
                   disabled={!canUndo}
                   className={`
-                    group relative flex items-center justify-center w-10 h-8 rounded
+                    group relative flex items-center justify-center h-8 rounded
                     transition-all duration-200 z-10
                     ${
                       canUndo
@@ -341,7 +369,7 @@ const Toolbox = ({
                   onClick={onRedo}
                   disabled={!canRedo}
                   className={`
-                    group relative flex items-center justify-center w-10 h-8 rounded
+                    group relative flex items-center justify-center h-8 rounded
                     transition-all duration-200 z-10
                     ${
                       canRedo
@@ -367,12 +395,183 @@ const Toolbox = ({
         </>
       )}
 
-      {/* EDIT SECTION */}
+      {/* EDIT SECTION - Visual Effects */}
+      {onUpdateShape && (
+        <>
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
+              EDIT {!effectiveShape && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
+              {isMultiSelect && <span className="text-gray-500 text-[9px] ml-1">({selectedShapes.length})</span>}
+            </div>
+            
+            {/* Collapsed State - Show icons when no shape selected */}
+            {!effectiveShape && (
+              <div className="grid grid-cols-3 gap-1">
+                {/* Color Icon */}
+                <button
+                  disabled
+                  className="flex items-center justify-center h-7 rounded bg-gray-800 text-gray-600 cursor-not-allowed"
+                  title="Select a shape to edit color"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/>
+                    <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/>
+                    <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/>
+                    <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/>
+                    <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                  </svg>
+                </button>
+                
+                {/* Opacity Icon */}
+                <button
+                  disabled
+                  className="flex items-center justify-center h-7 rounded bg-gray-800 text-gray-600 cursor-not-allowed"
+                  title="Select a shape to edit opacity"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                    <line x1="8" y1="16" x2="16" y2="8" opacity="0.4"/>
+                  </svg>
+                </button>
+                
+                {/* Blend Icon */}
+                <button
+                  disabled
+                  className="flex items-center justify-center h-7 rounded bg-gray-800 text-gray-600 cursor-not-allowed"
+                  title="Select a shape to edit blend mode"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="9" r="7" opacity="0.5"/>
+                    <circle cx="15" cy="15" r="7" opacity="0.5"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+            
+            {/* Expanded State - Show full controls when shape selected */}
+            {effectiveShape && (
+              <>
+                {/* Color Picker Button */}
+                {onUpdateColor && (
+                  <div className="px-1 mb-2 relative">
+                    <label className="text-[10px] text-gray-400 block mb-1">Color</label>
+                    <button
+                      onClick={() => setIsColorPickerOpen(!isColorPickerOpen)}
+                      disabled={!layerControlsEnabled}
+                      className={`
+                        group relative w-full h-8 rounded border transition-all duration-200 z-10 flex items-center gap-2 px-2
+                        ${
+                          layerControlsEnabled
+                            ? 'border-gray-600 hover:border-gray-500'
+                            : 'border-gray-800 cursor-not-allowed opacity-50'
+                        }
+                      `}
+                      style={{ backgroundColor: layerControlsEnabled ? currentColor : '#374151' }}
+                      title="Color Picker"
+                    >
+                      {/* Color palette icon overlay */}
+                      <svg 
+                        width="16" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="white" 
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="drop-shadow-lg flex-shrink-0"
+                        style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.5))' }}
+                      >
+                        <circle cx="13.5" cy="6.5" r=".5" fill="white"/>
+                        <circle cx="17.5" cy="10.5" r=".5" fill="white"/>
+                        <circle cx="8.5" cy="7.5" r=".5" fill="white"/>
+                        <circle cx="6.5" cy="12.5" r=".5" fill="white"/>
+                        <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+                      </svg>
+                      <span className="text-[10px] font-medium text-white drop-shadow-lg" style={{ textShadow: '0 0 2px rgba(0,0,0,0.5)' }}>
+                        Color
+                      </span>
+                    </button>
+
+                    {/* Color Picker Popover */}
+                    {isColorPickerOpen && (
+                      <ColorPicker
+                        initialColor={currentColor}
+                        onColorChange={(color) => {
+                          handleColorChange(color, effectiveShape.opacity ?? 1);
+                        }}
+                        onClose={() => setIsColorPickerOpen(false)}
+                        showOpacity={false}
+                        anchorRef={toolboxRef}
+                      />
+                    )}
+                  </div>
+                )}
+                
+                {/* Opacity Slider */}
+                <div className="px-1 mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] text-gray-400">Opacity</label>
+                    <span className="text-[10px] text-gray-300">
+                      {Math.round((effectiveShape.opacity || 1) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="100"
+                    value={Math.round((effectiveShape.opacity || 1) * 100)}
+                    onChange={(e) => {
+                      const newOpacity = parseInt(e.target.value) / 100;
+                      onUpdateShape({ opacity: newOpacity });
+                    }}
+                    className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${Math.round((effectiveShape.opacity || 1) * 100)}%, #374151 ${Math.round((effectiveShape.opacity || 1) * 100)}%, #374151 100%)`,
+                    }}
+                  />
+                </div>
+                
+                {/* Blend Mode Dropdown */}
+                <div className="px-1">
+                  <label className="text-[10px] text-gray-400 block mb-1">Blend Mode</label>
+                  <select
+                    value={effectiveShape.blendMode || 'source-over'}
+                    onChange={(e) => {
+                      onUpdateShape({ blendMode: e.target.value });
+                    }}
+                    className="w-full px-2 py-1 text-[10px] bg-gray-700 text-gray-300 border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                  >
+                    <option value="source-over">Normal</option>
+                    <option value="multiply">Multiply</option>
+                    <option value="screen">Screen</option>
+                    <option value="overlay">Overlay</option>
+                    <option value="darken">Darken</option>
+                    <option value="lighten">Lighten</option>
+                    <option value="color-dodge">Color Dodge</option>
+                    <option value="color-burn">Color Burn</option>
+                    <option value="hard-light">Hard Light</option>
+                    <option value="soft-light">Soft Light</option>
+                    <option value="difference">Difference</option>
+                    <option value="exclusion">Exclusion</option>
+                    <option value="hue">Hue</option>
+                    <option value="saturation">Saturation</option>
+                    <option value="color">Color</option>
+                    <option value="luminosity">Luminosity</option>
+                  </select>
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ACTIONS SECTION - Duplicate and Delete */}
       {(onDuplicate || onDelete) && (
         <>
           <div className="mt-2 pt-2 border-t border-gray-700">
             <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
-              EDIT {!layerControlsEnabled && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
+              ACTIONS {!layerControlsEnabled && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
             </div>
             <div className="flex gap-1">
               {onDuplicate && (
@@ -450,122 +649,149 @@ const Toolbox = ({
               </div>
             )}
             
-            {/* New Layout: Single layer (↑,↓) on left, Multi-layer (↑↑,↓↓) on right */}
-            <div className="grid grid-cols-2 gap-1">
-              {/* LEFT COLUMN - Single layer moves */}
-              <div className="flex flex-col gap-1">
+            {/* Compact Layout: Only single-step buttons when no shape selected */}
+            {!layerControlsEnabled && (
+              <div className="grid grid-cols-2 gap-1">
                 {/* Bring Forward */}
                 <button
                   onClick={onBringForward}
-                  disabled={!layerControlsEnabled}
-                  onMouseEnter={() => setTooltip('Forward')}
-                  onMouseLeave={() => setTooltip(null)}
-                  className={`
-                    group relative flex items-center justify-center h-7 rounded
-                    transition-all duration-200 z-10
-                    ${
-                      layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                    }
-                  `}
-                  title="Bring Forward"
+                  disabled
+                  className="flex items-center justify-center h-7 rounded bg-gray-800 text-gray-600 cursor-not-allowed"
+                  title="Select a shape to bring forward"
                 >
-                  <div className="relative z-10 text-xs font-semibold">↑</div>
-                  
-                  {tooltip === 'Forward' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
-                         style={{ zIndex: 10000 }}>
-                      Forward
-                    </div>
-                  )}
+                  <div className="text-xs font-semibold">↑</div>
                 </button>
 
                 {/* Send Backward */}
                 <button
                   onClick={onSendBackward}
-                  disabled={!layerControlsEnabled}
-                  onMouseEnter={() => setTooltip('Backward')}
-                  onMouseLeave={() => setTooltip(null)}
-                  className={`
-                    group relative flex items-center justify-center h-7 rounded
-                    transition-all duration-200 z-10
-                    ${
-                      layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                    }
-                  `}
-                  title="Send Backward"
+                  disabled
+                  className="flex items-center justify-center h-7 rounded bg-gray-800 text-gray-600 cursor-not-allowed"
+                  title="Select a shape to send backward"
                 >
-                  <div className="relative z-10 text-xs font-semibold">↓</div>
-                  
-                  {tooltip === 'Backward' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
-                         style={{ zIndex: 10000 }}>
-                      Backward
-                    </div>
-                  )}
+                  <div className="text-xs font-semibold">↓</div>
                 </button>
               </div>
+            )}
+            
+            {/* Full Layout: All 4 buttons when shape is selected */}
+            {layerControlsEnabled && (
+              <div className="grid grid-cols-2 gap-1">
+                {/* LEFT COLUMN - Single layer moves */}
+                <div className="flex flex-col gap-1">
+                  {/* Bring Forward */}
+                  <button
+                    onClick={onBringForward}
+                    disabled={!layerControlsEnabled}
+                    onMouseEnter={() => setTooltip('Forward')}
+                    onMouseLeave={() => setTooltip(null)}
+                    className={`
+                      group relative flex items-center justify-center h-7 rounded
+                      transition-all duration-200 z-10
+                      ${
+                        layerControlsEnabled
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                      }
+                    `}
+                    title="Bring Forward"
+                  >
+                    <div className="relative z-10 text-xs font-semibold">↑</div>
+                    
+                    {tooltip === 'Forward' && layerControlsEnabled && (
+                      <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                           style={{ zIndex: 10000 }}>
+                        Forward
+                      </div>
+                    )}
+                  </button>
 
-              {/* RIGHT COLUMN - Front/Back moves */}
-              <div className="flex flex-col gap-1">
-                {/* Bring to Front */}
-                <button
-                  onClick={onBringToFront}
-                  disabled={!layerControlsEnabled}
-                  onMouseEnter={() => setTooltip('To Front')}
-                  onMouseLeave={() => setTooltip(null)}
-                  className={`
-                    group relative flex items-center justify-center h-7 rounded
-                    transition-all duration-200 z-10
-                    ${
-                      layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                    }
-                  `}
-                  title="Bring to Front"
-                >
-                  <div className="relative z-10 text-xs font-semibold">↑↑</div>
-                  
-                  {tooltip === 'To Front' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
-                         style={{ zIndex: 10000 }}>
-                      To Front
-                    </div>
-                  )}
-                </button>
+                  {/* Send Backward */}
+                  <button
+                    onClick={onSendBackward}
+                    disabled={!layerControlsEnabled}
+                    onMouseEnter={() => setTooltip('Backward')}
+                    onMouseLeave={() => setTooltip(null)}
+                    className={`
+                      group relative flex items-center justify-center h-7 rounded
+                      transition-all duration-200 z-10
+                      ${
+                        layerControlsEnabled
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                      }
+                    `}
+                    title="Send Backward"
+                  >
+                    <div className="relative z-10 text-xs font-semibold">↓</div>
+                    
+                    {tooltip === 'Backward' && layerControlsEnabled && (
+                      <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                           style={{ zIndex: 10000 }}>
+                        Backward
+                      </div>
+                    )}
+                  </button>
+                </div>
 
-                {/* Send to Back */}
-                <button
-                  onClick={onSendToBack}
-                  disabled={!layerControlsEnabled}
-                  onMouseEnter={() => setTooltip('To Back')}
-                  onMouseLeave={() => setTooltip(null)}
-                  className={`
-                    group relative flex items-center justify-center h-7 rounded
-                    transition-all duration-200 z-10
-                    ${
-                      layerControlsEnabled
-                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
-                    }
-                  `}
-                  title="Send to Back"
-                >
-                  <div className="relative z-10 text-xs font-semibold">↓↓</div>
-                  
-                  {tooltip === 'To Back' && layerControlsEnabled && (
-                    <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
-                         style={{ zIndex: 10000 }}>
-                      To Back
-                    </div>
-                  )}
-                </button>
+                {/* RIGHT COLUMN - Front/Back moves */}
+                <div className="flex flex-col gap-1">
+                  {/* Bring to Front */}
+                  <button
+                    onClick={onBringToFront}
+                    disabled={!layerControlsEnabled}
+                    onMouseEnter={() => setTooltip('To Front')}
+                    onMouseLeave={() => setTooltip(null)}
+                    className={`
+                      group relative flex items-center justify-center h-7 rounded
+                      transition-all duration-200 z-10
+                      ${
+                        layerControlsEnabled
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                      }
+                    `}
+                    title="Bring to Front"
+                  >
+                    <div className="relative z-10 text-xs font-semibold">↑↑</div>
+                    
+                    {tooltip === 'To Front' && layerControlsEnabled && (
+                      <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                           style={{ zIndex: 10000 }}>
+                        To Front
+                      </div>
+                    )}
+                  </button>
+
+                  {/* Send to Back */}
+                  <button
+                    onClick={onSendToBack}
+                    disabled={!layerControlsEnabled}
+                    onMouseEnter={() => setTooltip('To Back')}
+                    onMouseLeave={() => setTooltip(null)}
+                    className={`
+                      group relative flex items-center justify-center h-7 rounded
+                      transition-all duration-200 z-10
+                      ${
+                        layerControlsEnabled
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                      }
+                    `}
+                    title="Send to Back"
+                  >
+                    <div className="relative z-10 text-xs font-semibold">↓↓</div>
+                    
+                    {tooltip === 'To Back' && layerControlsEnabled && (
+                      <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-100 pointer-events-none whitespace-nowrap shadow-2xl border border-gray-700"
+                           style={{ zIndex: 10000 }}>
+                        To Back
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </>
       )}
@@ -641,70 +867,6 @@ const Toolbox = ({
                   )}
                 </button>
               ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* VISUAL EFFECTS SECTION */}
-      {effectiveShape && onUpdateShape && (
-        <>
-          <div className="mt-2 pt-2 border-t border-gray-700">
-            <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
-              VISUAL EFFECTS {isMultiSelect && <span className="text-gray-500 text-[9px] ml-1">({selectedShapes.length})</span>}
-            </div>
-            
-            {/* Opacity Slider */}
-            <div className="px-1 mb-2">
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] text-gray-400">Opacity</label>
-                <span className="text-[10px] text-gray-300">
-                  {Math.round((effectiveShape.opacity || 1) * 100)}%
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={Math.round((effectiveShape.opacity || 1) * 100)}
-                onChange={(e) => {
-                  const newOpacity = parseInt(e.target.value) / 100;
-                  onUpdateShape({ opacity: newOpacity });
-                }}
-                className="w-full h-1.5 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                style={{
-                  background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${Math.round((effectiveShape.opacity || 1) * 100)}%, #374151 ${Math.round((effectiveShape.opacity || 1) * 100)}%, #374151 100%)`,
-                }}
-              />
-            </div>
-            
-            {/* Blend Mode Dropdown */}
-            <div className="px-1">
-              <label className="text-[10px] text-gray-400 block mb-1">Blend Mode</label>
-              <select
-                value={effectiveShape.blendMode || 'source-over'}
-                onChange={(e) => {
-                  onUpdateShape({ blendMode: e.target.value });
-                }}
-                className="w-full px-2 py-1 text-[10px] bg-gray-700 text-gray-300 border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
-              >
-                <option value="source-over">Normal</option>
-                <option value="multiply">Multiply</option>
-                <option value="screen">Screen</option>
-                <option value="overlay">Overlay</option>
-                <option value="darken">Darken</option>
-                <option value="lighten">Lighten</option>
-                <option value="color-dodge">Color Dodge</option>
-                <option value="color-burn">Color Burn</option>
-                <option value="hard-light">Hard Light</option>
-                <option value="soft-light">Soft Light</option>
-                <option value="difference">Difference</option>
-                <option value="exclusion">Exclusion</option>
-                <option value="hue">Hue</option>
-                <option value="saturation">Saturation</option>
-                <option value="color">Color</option>
-                <option value="luminosity">Luminosity</option>
-              </select>
             </div>
           </div>
         </>

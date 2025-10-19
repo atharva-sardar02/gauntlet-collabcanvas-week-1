@@ -87,19 +87,16 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     x: shape.x,
     y: shape.y,
     rotation: shape.rotation || 0, // Apply rotation from Firestore
-    // Text: yellow when selected, white when not selected
-    // Other shapes: keep their fill color
-    fill: shape.type === 'text' 
-      ? (isSelected ? '#FFD700' : 'white')  // Yellow when selected, white when not
-      : shape.fill,
+    // Use the shape's fill color from database (default white for text)
+    fill: shape.fill,
     // Other shapes: white border when selected OR hovered (for translucent shapes)
-    // Text: no border
-    stroke: (isSelected || isHovered) && shape.type !== 'text'
-      ? 'white'
-      : shape.isLocked ? shape.lockedByColor || '#ff0000' : undefined,
-    strokeWidth: (isSelected || isHovered) && shape.type !== 'text' || shape.isLocked 
-      ? 2 
-      : 0,
+    // Text: no border, just subtle glow
+    stroke: shape.type === 'text'
+      ? undefined  // No stroke for text
+      : ((isSelected || isHovered) ? 'white' : (shape.isLocked ? shape.lockedByColor || '#ff0000' : undefined)),
+    strokeWidth: shape.type === 'text'
+      ? 0  // No stroke for text
+      : ((isSelected || isHovered) || shape.isLocked ? 2 : 0),
     draggable: !shape.isLocked,
     onClick: onSelect,
     onTap: onSelect,
@@ -113,11 +110,10 @@ const Shape = ({ shape, isSelected, onSelect, onDragEnd, onTransformEnd, onConte
     opacity: isHovered ? (shape.opacity || 1) * 0.4 : (shape.opacity || 1),
     // Blend mode: apply Konva's globalCompositeOperation (cast to proper type)
     globalCompositeOperation: (shape.blendMode || 'source-over') as GlobalCompositeOperation,
-    // Other shapes: solid border with glow
-    // Text shapes: no border, no glow
-    shadowBlur: isSelected && shape.type !== 'text' ? 5 : 0,
-    shadowColor: isSelected && shape.type !== 'text' ? 'white' : undefined,
-    shadowOpacity: isSelected && shape.type !== 'text' ? 0.8 : 0,
+    // Selection glow: very subtle blue glow for text, white glow for other shapes
+    shadowBlur: isSelected ? (shape.type === 'text' ? 5 : 5) : 0,
+    shadowColor: isSelected ? (shape.type === 'text' ? '#3B82F6' : 'white') : undefined,
+    shadowOpacity: isSelected ? (shape.type === 'text' ? 0.5 : 0.8) : 0,
   };
 
   const renderShape = () => {

@@ -86,6 +86,7 @@ export interface CanvasContextType {
   bulkAddShapes: (shapes: Array<Omit<Shape, 'id'>>) => Promise<void>;
   updateShape: (id: string, updates: Partial<Shape>, skipHistory?: boolean) => Promise<void>;
   updateShapeName: (id: string, newName: string) => Promise<void>;  // NEW: Rename shape
+  updateShapeColor: (shapeIds: string[], color: string, opacity?: number) => Promise<void>;  // NEW: Update color
   deleteShape: (id: string, skipHistory?: boolean) => Promise<void>;
   selectShape: (id: string | null) => void;
   selectShapes: (ids: string[]) => void;
@@ -716,6 +717,25 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     setSelectedIds([]);
   }, [clearAllShapesInFirebase]);
 
+  /**
+   * Update color of multiple shapes
+   * Used by color picker to apply color to selected shapes
+   */
+  const updateShapeColor = useCallback(
+    async (shapeIds: string[], color: string, opacity?: number) => {
+      const updates: Partial<Shape> = { fill: color };
+      if (opacity !== undefined) {
+        updates.opacity = opacity;
+      }
+
+      // Update all shapes
+      for (const id of shapeIds) {
+        await updateShape(id, updates, false);
+      }
+    },
+    [updateShape]
+  );
+
   const value: CanvasContextType = {
     shapes,
     selectedId,
@@ -727,6 +747,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     bulkAddShapes,
     updateShape,
     updateShapeName,  // NEW: Add to context
+    updateShapeColor, // NEW: Color picker
     deleteShape,
     selectShape,
     selectShapes,

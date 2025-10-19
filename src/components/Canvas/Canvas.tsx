@@ -52,7 +52,7 @@ const Canvas = ({
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes } = context;
+  const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes, updateShapeColor } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const multiSelectTransformerRef = useRef<Konva.Transformer>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
@@ -203,6 +203,16 @@ const Canvas = ({
     }
     showToast(`Deleted ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''}`, 'success');
   }, [selectedIds, selectedId, shapes, deleteShape, showToast]);
+
+  /**
+   * Handle color update from color picker
+   */
+  const handleUpdateColor = useCallback(async (color: string, opacity: number) => {
+    if (selectedIds.length > 0) {
+      await updateShapeColor(selectedIds, color, opacity);
+      showToast(`Updated color for ${selectedIds.length} shape${selectedIds.length > 1 ? 's' : ''}`, 'success');
+    }
+  }, [selectedIds, updateShapeColor, showToast]);
 
   /**
    * Handle escape to deselect
@@ -1011,6 +1021,7 @@ const Canvas = ({
             text: 'Double-click to edit',
             fontSize: 16,
             fontFamily: 'Arial',
+            fill: 'white',  // Default text color is white
           });
         }
       }
@@ -1484,6 +1495,7 @@ const Canvas = ({
         canRedo={(window as any).__historyManager?.canRedo || false}
         onDuplicate={handleDuplicate}
         onDelete={handleDelete}
+        onUpdateColor={handleUpdateColor}
         onAlign={handleAlign}
         onDistribute={handleDistribute}
         alignmentEnabled={selectedIds.length >= 2}
