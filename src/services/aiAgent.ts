@@ -175,14 +175,9 @@ export async function executeToolCalls(
           break;
 
         case 'align':
-          // alignShapes expects array of shape objects, not just IDs
-          // We need to find the shapes by ID first
-          const shapesToAlign = args.ids
-            .map((id: string) => canvasContext.shapes.find((s: any) => s.id === id))
-            .filter(Boolean);
-          
-          if (shapesToAlign.length > 0) {
-            await canvasContext.alignShapes(shapesToAlign, args.mode);
+          // alignShapes expects array of shape IDs (not shape objects)
+          if (args.ids.length > 0) {
+            await canvasContext.alignShapes(args.ids, args.mode);
           }
           break;
 

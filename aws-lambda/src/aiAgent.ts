@@ -49,7 +49,7 @@ export async function executeAICommand(
 
   // Initialize OpenAI model
   const model = new ChatOpenAI({
-    modelName: 'gpt-3.5-turbo',
+    modelName: 'gpt-4o-mini',  // Better reasoning for complex layouts and color matching
     temperature: 0,
     openAIApiKey: openaiApiKey,
     maxTokens: 4000, // Allow longer responses
@@ -77,9 +77,50 @@ export async function executeAICommand(
           filteredShapes = filteredShapes.filter((s: any) => s.type === input.filter.type);
         }
         if (input?.filter?.fill) {
-          filteredShapes = filteredShapes.filter((s: any) => 
-            s.fill?.toLowerCase().includes(input.filter.fill.toLowerCase())
-          );
+          // Support color keywords - map to common hex codes
+          const colorMap: any = {
+            'red': ['#EF4444', '#DC2626', '#B91C1C', '#FF0000', '#F87171', '#EF4444FF'],
+            'blue': ['#3B82F6', '#2563EB', '#1D4ED8', '#0000FF', '#60A5FA', '#3B82F6FF'],
+            'green': ['#10B981', '#059669', '#047857', '#00FF00', '#34D399', '#10B981FF'],
+            'yellow': ['#F59E0B', '#D97706', '#B45309', '#FFFF00', '#FBBF24', '#F59E0BFF'],
+            'purple': ['#8B5CF6', '#7C3AED', '#6D28D9', '#A855F7', '#8B5CF6FF'],
+            'pink': ['#EC4899', '#DB2777', '#BE185D', '#F472B6', '#EC4899FF'],
+            'orange': ['#F97316', '#EA580C', '#C2410C', '#FB923C', '#F97316FF'],
+            'gray': ['#6B7280', '#4B5563', '#374151', '#9CA3AF', '#6B7280FF'],
+            'grey': ['#6B7280', '#4B5563', '#374151', '#9CA3AF', '#6B7280FF'], // British spelling
+            'black': ['#000000', '#111827', '#1F2937', '#000000FF'],
+            'white': ['#FFFFFF', '#F9FAFB', '#F3F4F6', '#FFFFFFFF'],
+          };
+          
+          const searchColor = input.filter.fill.toLowerCase();
+          
+          // Check if it's a color keyword
+          if (colorMap[searchColor]) {
+            filteredShapes = filteredShapes.filter((s: any) => {
+              if (!s.fill) return false;
+              const shapeFill = s.fill.toUpperCase().replace(/\s/g, '');
+              
+              // Check exact match or starts with (for alpha channel)
+              const exactMatch = colorMap[searchColor].some((hex: string) => {
+                const cleanHex = hex.toUpperCase().replace(/\s/g, '');
+                return shapeFill === cleanHex || shapeFill.startsWith(cleanHex);
+              });
+              
+              if (exactMatch) return true;
+              
+              // Also check if the color name is in the fill (e.g., "blue" in fill string)
+              if (s.fill.toLowerCase().includes(searchColor)) return true;
+              
+              return false;
+            });
+          } else {
+            // Otherwise do substring match (for hex codes)
+            filteredShapes = filteredShapes.filter((s: any) => 
+              s.fill?.toLowerCase().includes(searchColor)
+            );
+          }
+          
+          console.log(`Filter by color "${input.filter.fill}": found ${filteredShapes.length} shapes out of ${canvasState.shapes?.length || 0} total`);
         }
         
         const summary = filteredShapes.map((s: any) => ({
@@ -317,13 +358,14 @@ User: "Rotate the circle by 45 degrees"
 2. Call rotateShape with the ID and degrees: 45
 
 User: "Arrange these shapes in a horizontal row"
-1. Call getShapes (no filter to get all shapes)
-2. Extract all shape IDs from response
-3. Call distribute with ids array and axis: "horizontal"
+1. Call getShapes (no filter ONLY if there are less than 20 shapes total)
+2. If there are many shapes, ask user to be more specific OR only arrange top-level shapes (skip text/labels)
+3. Extract shape IDs from response
+4. Call distribute with ids array and axis: "horizontal"
 
 User: "Space these elements evenly"
-1. Call getShapes (no filter to get all shapes)
-2. Extract all shape IDs from response  
+1. Call getShapes (be smart about filtering - if there are 50+ shapes, only get rectangles/circles, not text)
+2. Extract shape IDs from response  
 3. Call distribute with ids array and appropriate axis (horizontal or vertical based on context)
 
 **Available Tools**:
@@ -368,6 +410,10 @@ User: "Space these elements evenly"
 - ALWAYS query first with getShapes before any move/resize/rotate/distribute operation
 - For "create 50 circles", use bulkCreateShapes, NOT createShape 50 times
 - For "arrange these shapes", use distribute, NOT bulkCreateShapes
+- **CRITICAL**: When there are 50+ shapes (complex layouts like forms), DON'T arrange ALL of them!
+  - If user says "arrange in a row" with a complex layout, respond: "There are many shapes. Which ones would you like to arrange?"
+  - OR only arrange non-text shapes (filter out type='text')
+  - Complex layouts (login forms, dashboards) should NOT be rearranged unless user is very specific
 
 **HANDLING AMBIGUOUS/ABRUPT PROMPTS**:
 
