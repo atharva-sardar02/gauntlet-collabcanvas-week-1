@@ -73,7 +73,7 @@ export const createTextSchema = z.object({
   x: z.number().describe('X position'),
   y: z.number().describe('Y position'),
   fontSize: z.number().positive().optional().default(16).describe('Font size in pixels'),
-  fill: z.string().optional().default('#000000').describe('Text color (hex)'),
+  fill: z.string().optional().default('white').describe('Text color (hex or color name)'),
   fontFamily: z.string().optional().default('Arial').describe('Font family'),
   bold: z.boolean().optional().default(false).describe('Bold text'),
   italic: z.boolean().optional().default(false).describe('Italic text'),
@@ -134,7 +134,7 @@ export const createComplexLayoutSchema = z.object({
     style: z.object({
       primaryColor: z.string().optional().default('#3B82F6'),
       backgroundColor: z.string().optional().default('#FFFFFF'),
-      textColor: z.string().optional().default('#000000'),
+      textColor: z.string().optional().default('white'),  // Default white for text on dark canvas
     }).optional().default({}),
   }).optional().default({}),
   position: z.object({

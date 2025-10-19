@@ -101,12 +101,15 @@ export async function sendCommandToAI(
  * Execute tool calls on canvas
  * @param toolCalls - Array of tool calls from AI
  * @param canvasContext - Canvas context with methods
+ * @returns Array of affected shape coordinates for navigation
  */
 export async function executeToolCalls(
   toolCalls: ToolCall[],
   canvasContext: any
-): Promise<void> {
+): Promise<{ x: number; y: number; width: number; height: number }[]> {
   console.log(`Executing ${toolCalls.length} tool calls...`);
+
+  const affectedAreas: { x: number; y: number; width: number; height: number }[] = [];
 
   for (const toolCall of toolCalls) {
     const { name, arguments: args } = toolCall.function;
@@ -137,47 +140,78 @@ export async function executeToolCalls(
             shapeData.stroke = args.stroke;
           }
           await canvasContext.addShape(shapeData);
+          affectedAreas.push({ x: args.x, y: args.y, width: args.width, height: args.height });
           break;
 
         case 'moveShape':
+          // Get current shape data before update
+          const shapeToMove = canvasContext.shapes.find((s: any) => s.id === args.id);
           await canvasContext.updateShape(args.id, {
             x: args.x,
             y: args.y,
           });
+          // Track new position with existing dimensions
+          if (shapeToMove) {
+            affectedAreas.push({ x: args.x, y: args.y, width: shapeToMove.width, height: shapeToMove.height });
+          }
           break;
 
         case 'resizeShape':
+          // Get current shape data before update
+          const shapeToResize = canvasContext.shapes.find((s: any) => s.id === args.id);
           await canvasContext.updateShape(args.id, {
             width: args.width,
             height: args.height,
           });
+          // Track with new dimensions
+          if (shapeToResize) {
+            affectedAreas.push({ x: shapeToResize.x, y: shapeToResize.y, width: args.width, height: args.height });
+          }
           break;
 
         case 'rotateShape':
+          // Get current shape data before update
+          const shapeToRotate = canvasContext.shapes.find((s: any) => s.id === args.id);
           await canvasContext.updateShape(args.id, {
             rotation: args.degrees,
           });
+          // Track current position
+          if (shapeToRotate) {
+            affectedAreas.push({ x: shapeToRotate.x, y: shapeToRotate.y, width: shapeToRotate.width, height: shapeToRotate.height });
+          }
           break;
 
         case 'updateShape':
           // Update shape properties (color, opacity, blend mode, etc.)
+          // Get current shape data before update
+          const shapeToUpdate = canvasContext.shapes.find((s: any) => s.id === args.id);
           const updates: any = {};
           if (args.fill) updates.fill = args.fill;
           if (args.stroke) updates.stroke = args.stroke;
           if (args.opacity !== undefined) updates.opacity = args.opacity;
           if (args.blendMode) updates.blendMode = args.blendMode;
           await canvasContext.updateShape(args.id, updates);
+          // Track current position
+          if (shapeToUpdate) {
+            affectedAreas.push({ x: shapeToUpdate.x, y: shapeToUpdate.y, width: shapeToUpdate.width, height: shapeToUpdate.height });
+          }
           break;
 
         case 'deleteShape':
-          // Delete an existing shape
+          // Delete an existing shape (don't track for navigation)
           await canvasContext.deleteShape(args.id);
           break;
 
         case 'align':
           // alignShapes expects array of shape IDs (not shape objects)
           if (args.ids.length > 0) {
+            // Get shapes before aligning
+            const shapesToAlign = args.ids.map((id: string) => canvasContext.shapes.find((s: any) => s.id === id)).filter(Boolean);
             await canvasContext.alignShapes(args.ids, args.mode);
+            // Track all aligned shapes (use their current positions, they'll be updated)
+            shapesToAlign.forEach((shape: any) => {
+              affectedAreas.push({ x: shape.x, y: shape.y, width: shape.width, height: shape.height });
+            });
           }
           break;
 
@@ -185,7 +219,13 @@ export async function executeToolCalls(
           // distributeShapes expects array of shape IDs
           // AI agent always creates straight rows/columns, so pass align=true
           if (args.ids.length >= 2) {
+            // Get shapes before distributing
+            const shapesToDistribute = args.ids.map((id: string) => canvasContext.shapes.find((s: any) => s.id === id)).filter(Boolean);
             await canvasContext.distributeShapes(args.ids, args.axis, true);
+            // Track all distributed shapes (use their current positions, they'll be updated)
+            shapesToDistribute.forEach((shape: any) => {
+              affectedAreas.push({ x: shape.x, y: shape.y, width: shape.width, height: shape.height });
+            });
           }
           break;
 
@@ -196,10 +236,11 @@ export async function executeToolCalls(
             y: args.y,
             text: args.text,
             fontSize: args.fontSize || 16,
-            fill: args.fill || '#000000',
+            fill: args.fill || 'white',  // Default white for AI-created text
             fontFamily: args.fontFamily || 'Arial',
             fontStyle: `${args.bold ? 'bold ' : ''}${args.italic ? 'italic' : ''}`.trim() || 'normal',
           });
+          affectedAreas.push({ x: args.x, y: args.y, width: 100, height: args.fontSize || 16 });
           break;
 
         case 'makeComponent':
@@ -238,6 +279,8 @@ export async function executeToolCalls(
             if (shape.rotation) {
               shapeData.rotation = shape.rotation;
             }
+            // Track all created shapes
+            affectedAreas.push({ x: shape.x, y: shape.y, width: shape.width, height: shape.height });
             return shapeData;
           });
           
@@ -258,7 +301,8 @@ export async function executeToolCalls(
               y: shape.y,
               width: shape.width,
               height: shape.height,
-              fill: shape.fill || '#3B82F6',
+              // Default fill: white for text, blue for other shapes
+              fill: shape.fill || (shape.type === 'text' ? 'white' : '#3B82F6'),
               opacity: shape.opacity !== undefined ? shape.opacity : 1,
               blendMode: shape.blendMode || 'source-over',
             };
@@ -273,6 +317,9 @@ export async function executeToolCalls(
             if (shape.stroke) {
               shapeData.stroke = shape.stroke;
             }
+            
+            // Track all created shapes
+            affectedAreas.push({ x: shape.x, y: shape.y, width: shape.width, height: shape.height });
             
             return shapeData;
           });
@@ -293,6 +340,7 @@ export async function executeToolCalls(
   }
 
   console.log('All tool calls executed successfully');
+  return affectedAreas;
 }
 
 

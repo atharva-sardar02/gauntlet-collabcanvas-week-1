@@ -63,6 +63,7 @@ export function AIAgentProvider({ children }: { children: ReactNode }) {
       let totalExecuted = 0;
       let batchNumber = 1;
       let hasMore = true;
+      const allAffectedAreas: { x: number; y: number; width: number; height: number }[] = [];
 
       // Build canvas state
       const canvasState = {
@@ -94,8 +95,9 @@ export function AIAgentProvider({ children }: { children: ReactNode }) {
           batchNumber: response.batchNumber,
         });
 
-        // Execute tool calls on canvas
-        await executeToolCalls(response.toolCalls, canvasContext);
+        // Execute tool calls on canvas and collect affected areas
+        const affectedAreas = await executeToolCalls(response.toolCalls, canvasContext);
+        allAffectedAreas.push(...affectedAreas);
 
         // Check if more batches needed
         hasMore = response.hasMore;
@@ -117,34 +119,28 @@ export function AIAgentProvider({ children }: { children: ReactNode }) {
       // Show success
       console.log(`✅ Successfully executed ${totalExecuted} operations in ${batchNumber - 1} batches`);
 
-      // Navigate to created shapes
-      if (canvasContext.shapes.length > 0) {
-        // Get the last shapes that were created (rough estimate based on total executed)
-        const recentShapes = canvasContext.shapes.slice(-Math.min(totalExecuted, 50));
+      // Navigate to created/modified shapes using tracked affected areas
+      if (allAffectedAreas.length > 0) {
+        // Calculate bounding box of all affected areas
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         
-        if (recentShapes.length > 0) {
-          // Calculate bounding box of created shapes
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-          
-          recentShapes.forEach(shape => {
-            minX = Math.min(minX, shape.x);
-            minY = Math.min(minY, shape.y);
-            maxX = Math.max(maxX, shape.x + (shape.width || 0));
-            maxY = Math.max(maxY, shape.y + (shape.height || 0));
-          });
-          
-          // Center point of created shapes
-          const centerX = (minX + maxX) / 2;
-          const centerY = (minY + maxY) / 2;
-          
-          console.log(`📍 Navigating to created shapes at (${Math.round(centerX)}, ${Math.round(centerY)})`);
-          
-          // Trigger canvas pan (this will be handled by the browser's scroll behavior)
-          // Since we don't have direct access to stage, we'll use a custom event
-          window.dispatchEvent(new CustomEvent('panToLocation', { 
-            detail: { x: centerX, y: centerY } 
-          }));
-        }
+        allAffectedAreas.forEach(area => {
+          minX = Math.min(minX, area.x);
+          minY = Math.min(minY, area.y);
+          maxX = Math.max(maxX, area.x + area.width);
+          maxY = Math.max(maxY, area.y + area.height);
+        });
+        
+        // Center point of affected shapes
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        
+        console.log(`📍 Navigating to affected shapes at (${Math.round(centerX)}, ${Math.round(centerY)})`);
+        
+        // Trigger canvas pan
+        window.dispatchEvent(new CustomEvent('panToLocation', { 
+          detail: { x: centerX, y: centerY } 
+        }));
       }
 
       // Close command bar after successful execution

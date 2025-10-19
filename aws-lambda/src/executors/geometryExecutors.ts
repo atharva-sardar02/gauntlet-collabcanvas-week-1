@@ -154,7 +154,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
   const style = config?.style || {};
   const primaryColor = style.primaryColor || '#3B82F6';
   const backgroundColor = style.backgroundColor || '#FFFFFF';
-  const textColor = style.textColor || '#000000';
+  const textColor = style.textColor || 'white';  // Default white for dark canvas
 
   switch (type) {
     case 'login_form': {
@@ -216,7 +216,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         width: 160,
         height: 30,
         fontSize: 28,
-        fill: '#111827', // Dark text for contrast
+        fill: textColor,  // Use configurable text color
       });
       
       // Username label
@@ -228,7 +228,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         width: 80,
         height: 20,
         fontSize: 14,
-        fill: '#374151', // Dark gray
+        fill: textColor,  // Use configurable text color
       });
       
       // Password label
@@ -240,7 +240,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         width: 80,
         height: 20,
         fontSize: 14,
-        fill: '#374151', // Dark gray
+        fill: textColor,  // Use configurable text color
       });
       
       // Button text (on top, contrasting)
@@ -343,7 +343,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         width: 60,
         height: 20,
         fontSize: 16,
-        fill: '#374151',
+        fill: '#FFFFFF',  // White text for visibility on gray
       });
 
       // Layer 4: Title
@@ -367,7 +367,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
         width: cardWidth - padding * 2,
         height: 100,
         fontSize: 14,
-        fill: '#6B7280', // Gray text
+        fill: textColor,  // Use configurable text color
       });
 
       // Layer 6: Button
@@ -455,7 +455,7 @@ export function executeCreateComplexLayout(args: CreateComplexLayoutArgs): Compu
           width: 100,
           height: 20,
           fontSize: 14,
-          fill: '#6B7280',
+          fill: textColor,  // Use configurable text color
         });
       });
 
