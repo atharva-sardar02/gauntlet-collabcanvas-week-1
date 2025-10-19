@@ -79,6 +79,9 @@ export const getRandomCursorColor = (): string => {
 export const SHORTCUTS = {
   DELETE: ['Delete', 'Backspace'],
   DUPLICATE: 'KeyD', // Will check for Ctrl/Cmd modifier
+  COPY: 'KeyC', // Ctrl/Cmd+C
+  CUT: 'KeyX', // Ctrl/Cmd+X
+  PASTE: 'KeyV', // Ctrl/Cmd+V
   NUDGE_UP: 'ArrowUp',
   NUDGE_DOWN: 'ArrowDown',
   NUDGE_LEFT: 'ArrowLeft',

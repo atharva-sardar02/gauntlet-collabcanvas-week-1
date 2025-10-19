@@ -52,7 +52,7 @@ const Canvas = ({
     throw new Error('Canvas must be used within a CanvasProvider');
   }
 
-  const { shapes, selectedId, selectedIds, loading, error, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes, updateShapeColor } = context;
+  const { shapes, selectedId, selectedIds, loading, error, hasClipboard, setStageRef, selectShape, toggleShapeSelection, addShape, updateShape, deleteShape, duplicateShape, nudgeShape, alignShapes, distributeShapes, bringShapeToFront, sendShapeToBack, bringShapeForward, sendShapeBackward, getShapeLayerInfo, clearAllShapes, updateShapeColor } = context;
   const stageRef = useRef<Konva.Stage>(null);
   const multiSelectTransformerRef = useRef<Konva.Transformer>(null);
   const [dimensions, setDimensions] = useState(getViewportDimensions());
@@ -178,6 +178,69 @@ const Canvas = ({
     }
     showToast(`Duplicated ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''}`, 'success');
   }, [selectedIds, selectedId, shapes, duplicateShape, showToast]);
+
+  /**
+   * Handle copy shortcut (Ctrl/Cmd + C)
+   */
+  const handleCopy = useCallback(() => {
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
+    
+    context.copyShapes(idsToProcess);
+    showToast(`Copied ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''}`, 'success');
+  }, [selectedIds, selectedId, context, showToast]);
+
+  /**
+   * Handle cut shortcut (Ctrl/Cmd + X)
+   */
+  const handleCut = useCallback(async () => {
+    const idsToProcess = selectedIds.length > 0 ? selectedIds : (selectedId ? [selectedId] : []);
+    if (idsToProcess.length === 0) return;
+    
+    const shapesToCut = shapes.filter(s => idsToProcess.includes(s.id));
+    if (shapesToCut.length === 0) return;
+    
+    // Check if any shapes are locked
+    const lockedShapes = shapesToCut.filter(s => s.isLocked);
+    if (lockedShapes.length > 0) {
+      showToast(`Cannot cut ${lockedShapes.length} locked shape${lockedShapes.length > 1 ? 's' : ''}`, 'error');
+      return;
+    }
+
+    await context.cutShapes(idsToProcess);
+    showToast(`Cut ${idsToProcess.length} shape${idsToProcess.length > 1 ? 's' : ''}`, 'success');
+  }, [selectedIds, selectedId, shapes, context, showToast]);
+
+  /**
+   * Handle paste shortcut (Ctrl/Cmd + V)
+   * Pastes shapes at cursor position in canvas coordinates
+   */
+  const handlePaste = useCallback(async () => {
+    if (!stageRef.current) return;
+
+    // Get the current pointer position (mouse cursor)
+    const stage = stageRef.current;
+    const pointerPosition = stage.getPointerPosition();
+    
+    let cursorX: number | undefined;
+    let cursorY: number | undefined;
+    
+    if (pointerPosition) {
+      // Convert screen coordinates to canvas coordinates (accounting for zoom/pan)
+      const transform = stage.getAbsoluteTransform().copy().invert();
+      const canvasPos = transform.point(pointerPosition);
+      cursorX = canvasPos.x;
+      cursorY = canvasPos.y;
+    }
+    
+    // Paste at cursor position (or use default offset if cursor not available)
+    const newShapeIds = await context.pasteShapes(cursorX, cursorY);
+    if (newShapeIds.length > 0) {
+      showToast(`Pasted ${newShapeIds.length} shape${newShapeIds.length > 1 ? 's' : ''}`, 'success');
+    } else {
+      showToast('Nothing to paste', 'info');
+    }
+  }, [context, showToast]);
 
   /**
    * Handle delete shortcut (Delete/Backspace)
@@ -525,6 +588,60 @@ const Canvas = ({
         handleDuplicate();
       },
       description: 'Duplicate selected shape (Cmd+D)',
+    },
+    {
+      key: 'c',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleCopy();
+      },
+      description: 'Copy selected shape (Ctrl+C)',
+    },
+    {
+      key: 'c',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleCopy();
+      },
+      description: 'Copy selected shape (Cmd+C)',
+    },
+    {
+      key: 'x',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleCut();
+      },
+      description: 'Cut selected shape (Ctrl+X)',
+    },
+    {
+      key: 'x',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handleCut();
+      },
+      description: 'Cut selected shape (Cmd+X)',
+    },
+    {
+      key: 'v',
+      ctrlKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handlePaste();
+      },
+      description: 'Paste shape (Ctrl+V)',
+    },
+    {
+      key: 'v',
+      metaKey: true,
+      handler: (e) => {
+        e.preventDefault();
+        handlePaste();
+      },
+      description: 'Paste shape (Cmd+V)',
     },
     {
       key: 'z',
@@ -1493,7 +1610,10 @@ const Canvas = ({
         onRedo={handleRedo}
         canUndo={(window as any).__historyManager?.canUndo || false}
         canRedo={(window as any).__historyManager?.canRedo || false}
-        onDuplicate={handleDuplicate}
+        onCopy={handleCopy}
+        onCut={handleCut}
+        onPaste={handlePaste}
+        hasClipboard={hasClipboard}
         onDelete={handleDelete}
         onUpdateColor={handleUpdateColor}
         onAlign={handleAlign}

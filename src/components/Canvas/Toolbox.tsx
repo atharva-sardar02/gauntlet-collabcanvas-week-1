@@ -14,7 +14,10 @@ interface ToolboxProps {
   canUndo?: boolean;
   canRedo?: boolean;
   // Edit actions
-  onDuplicate?: () => void;
+  onCopy?: () => void;
+  onCut?: () => void;
+  onPaste?: () => void;
+  hasClipboard?: boolean;  // Show paste button when clipboard has content
   onDelete?: () => void;
   onUpdateColor?: (color: string, opacity: number) => void; // Color picker
   // Alignment actions
@@ -45,7 +48,10 @@ const Toolbox = ({
   onRedo, 
   canUndo = false, 
   canRedo = false,
-  onDuplicate,
+  onCopy,
+  onCut,
+  onPaste,
+  hasClipboard = false,
   onDelete,
   onUpdateColor,
   onAlign,
@@ -566,17 +572,19 @@ const Toolbox = ({
         </>
       )}
 
-      {/* ACTIONS SECTION - Duplicate and Delete */}
-      {(onDuplicate || onDelete) && (
+      {/* ACTIONS SECTION - Copy, Cut, Paste, and Delete */}
+      {(onCopy || onCut || onPaste || onDelete) && (
         <>
           <div className="mt-2 pt-2 border-t border-gray-700">
             <div className="text-gray-400 text-[10px] font-semibold px-1 mb-1">
-              ACTIONS {!layerControlsEnabled && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
+              ACTIONS {!layerControlsEnabled && !hasClipboard && <span className="text-gray-600 text-[9px] ml-1">(Select 1)</span>}
             </div>
+            
+            {/* Single row: Copy, Cut, Paste, and Delete */}
             <div className="flex gap-1">
-              {onDuplicate && (
+              {onCopy && (
                 <button
-                  onClick={onDuplicate}
+                  onClick={onCopy}
                   disabled={!layerControlsEnabled}
                   className={`
                     group relative flex items-center justify-center flex-1 h-8 rounded
@@ -587,7 +595,7 @@ const Toolbox = ({
                         : 'bg-gray-800 text-gray-600 cursor-not-allowed'
                     }
                   `}
-                  title="Duplicate"
+                  title="Copy"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -596,7 +604,52 @@ const Toolbox = ({
                   
                   <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
                        style={{ zIndex: 10000 }}>
-                    Duplicate (Ctrl+D)
+                    Copy (Ctrl+C)
+                  </div>
+                </button>
+              )}
+              {onCut && (
+                <button
+                  onClick={onCut}
+                  disabled={!layerControlsEnabled}
+                  className={`
+                    group relative flex items-center justify-center flex-1 h-8 rounded
+                    transition-all duration-200 z-10
+                    ${
+                      layerControlsEnabled
+                        ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                        : 'bg-gray-800 text-gray-600 cursor-not-allowed'
+                    }
+                  `}
+                  title="Cut"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
+                    <circle cx="6" cy="6" r="3"/>
+                    <circle cx="6" cy="18" r="3"/>
+                    <line x1="20" y1="4" x2="8.12" y2="15.88"/>
+                    <line x1="14.47" y1="14.48" x2="20" y2="20"/>
+                  </svg>
+                  
+                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+                       style={{ zIndex: 10000 }}>
+                    Cut (Ctrl+X)
+                  </div>
+                </button>
+              )}
+              {onPaste && hasClipboard && (
+                <button
+                  onClick={onPaste}
+                  className="group relative flex items-center justify-center flex-1 h-8 rounded bg-blue-900/30 text-blue-400 hover:bg-blue-900/50 transition-all duration-200 z-10"
+                  title="Paste"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="relative z-10">
+                    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                  </svg>
+                  
+                  <div className="absolute left-full bottom-0 ml-2 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap shadow-2xl border border-gray-700"
+                       style={{ zIndex: 10000 }}>
+                    Paste (Ctrl+V)
                   </div>
                 </button>
               )}

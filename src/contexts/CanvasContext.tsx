@@ -82,6 +82,7 @@ export interface CanvasContextType {
   stageRef: React.RefObject<Konva.Stage> | null;
   loading: boolean;
   error: string | null;
+  hasClipboard: boolean;  // NEW: Whether clipboard has content
   addShape: (shape: Omit<Shape, 'id'>, skipHistory?: boolean) => Promise<void>;
   bulkAddShapes: (shapes: Array<Omit<Shape, 'id'>>) => Promise<void>;
   updateShape: (id: string, updates: Partial<Shape>, skipHistory?: boolean) => Promise<void>;
@@ -96,6 +97,9 @@ export interface CanvasContextType {
   unlockShape: (id: string) => Promise<void>;
   duplicateShape: (id: string, skipHistory?: boolean) => Promise<string | null>;
   nudgeShape: (id: string, direction: 'up' | 'down' | 'left' | 'right', amount: number, skipHistory?: boolean) => Promise<void>;
+  copyShapes: (ids: string[]) => void;  // NEW: Copy shapes to clipboard
+  cutShapes: (ids: string[]) => Promise<void>;  // NEW: Cut shapes to clipboard (copy + delete)
+  pasteShapes: (cursorX?: number, cursorY?: number) => Promise<string[]>;  // NEW: Paste shapes at cursor position
   setOperationCallback: (callback: ((operation: Operation) => void) | null) => void;
   recreateShape: (shape: Shape) => Promise<void>;
   alignShapes: (ids: string[], mode: 'left' | 'right' | 'top' | 'bottom' | 'center-h' | 'center-v') => Promise<void>;
@@ -126,6 +130,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [stageRef, setStageRefState] = useState<React.RefObject<Konva.Stage> | null>(null);
+  const [clipboard, setClipboard] = useState<Shape[]>([]);  // NEW: Clipboard for copy/paste
   const operationCallbackRef = useRef<((operation: Operation) => void) | null>(null);
   
   // Get current user for tracking operations
@@ -736,6 +741,138 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     [updateShape]
   );
 
+  /**
+   * Copy selected shapes to clipboard
+   * @param ids - IDs of shapes to copy
+   */
+  const copyShapes = useCallback(
+    (ids: string[]) => {
+      const shapesToCopy = shapes.filter(s => ids.includes(s.id));
+      if (shapesToCopy.length > 0) {
+        setClipboard(shapesToCopy);
+      }
+    },
+    [shapes]
+  );
+
+  /**
+   * Cut selected shapes to clipboard (copy + delete)
+   * @param ids - IDs of shapes to cut
+   */
+  const cutShapes = useCallback(
+    async (ids: string[]) => {
+      // First copy the shapes
+      const shapesToCut = shapes.filter(s => ids.includes(s.id));
+      if (shapesToCut.length > 0) {
+        setClipboard(shapesToCut);
+        
+        // Then delete them
+        for (const id of ids) {
+          await deleteShapeFromFirebase(id);
+        }
+        
+        // Clear selection
+        setSelectedId(null);
+        setSelectedIds([]);
+      }
+    },
+    [shapes, deleteShapeFromFirebase]
+  );
+
+  /**
+   * Paste shapes from clipboard at cursor position
+   * Creates new shapes offset to cursor position while maintaining relative positions
+   * @param cursorX - Optional cursor X position (if not provided, uses offset)
+   * @param cursorY - Optional cursor Y position (if not provided, uses offset)
+   * @returns IDs of newly created shapes
+   */
+  const pasteShapes = useCallback(
+    async (cursorX?: number, cursorY?: number): Promise<string[]> => {
+      if (clipboard.length === 0) return [];
+
+      const newShapeIds: string[] = [];
+
+      // Calculate the center point of all copied shapes
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const shape of clipboard) {
+        minX = Math.min(minX, shape.x);
+        minY = Math.min(minY, shape.y);
+        maxX = Math.max(maxX, shape.x + shape.width);
+        maxY = Math.max(maxY, shape.y + shape.height);
+      }
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      // If cursor position is provided, calculate offset to paste at cursor
+      // Otherwise, use default DUPLICATE_OFFSET behavior
+      let offsetX: number, offsetY: number;
+      if (cursorX !== undefined && cursorY !== undefined) {
+        offsetX = cursorX - centerX;
+        offsetY = cursorY - centerY;
+      } else {
+        offsetX = DUPLICATE_OFFSET;
+        offsetY = DUPLICATE_OFFSET;
+      }
+
+      // Clone each shape from clipboard with ALL properties
+      for (const shape of clipboard) {
+        const pastedShape: Omit<Shape, 'id'> = {
+          type: shape.type,
+          x: shape.x + offsetX,
+          y: shape.y + offsetY,
+          width: shape.width,
+          height: shape.height,
+          fill: shape.fill,
+          // Metadata
+          createdAt: Date.now(),
+        };
+
+        // Only add optional properties if they exist
+        if (shape.rotation !== undefined) pastedShape.rotation = shape.rotation;
+        if (shape.scaleX !== undefined) pastedShape.scaleX = shape.scaleX;
+        if (shape.scaleY !== undefined) pastedShape.scaleY = shape.scaleY;
+        if (shape.opacity !== undefined) pastedShape.opacity = shape.opacity;
+        if (shape.blendMode !== undefined) pastedShape.blendMode = shape.blendMode;
+        
+        // Text properties
+        if (shape.text !== undefined) pastedShape.text = shape.text;
+        if (shape.fontSize !== undefined) pastedShape.fontSize = shape.fontSize;
+        if (shape.fontFamily !== undefined) pastedShape.fontFamily = shape.fontFamily;
+        if (shape.fontStyle !== undefined) pastedShape.fontStyle = shape.fontStyle;
+        if (shape.textDecoration !== undefined) pastedShape.textDecoration = shape.textDecoration;
+        
+        // Stroke
+        if ((shape as any).stroke !== undefined) (pastedShape as any).stroke = (shape as any).stroke;
+
+        // Create the pasted shape
+        const newShapeId = await addShapeToFirebase(pastedShape);
+        if (newShapeId) {
+          newShapeIds.push(newShapeId);
+        }
+      }
+
+      // Track operation for history
+      if (operationCallbackRef.current && currentUser && newShapeIds.length > 0) {
+        operationCallbackRef.current({
+          id: `op-${Date.now()}`,
+          type: 'create',
+          userId: currentUser.uid,
+          timestamp: Date.now(),
+          before: {},
+          after: { shapeData: clipboard[0] }, // Store first shape for reference
+          shapeIds: newShapeIds,
+        });
+      }
+
+      // Update clipboard to point to newly pasted shapes (for successive pastes)
+      const newShapes = shapes.filter(s => newShapeIds.includes(s.id));
+      setClipboard(newShapes);
+
+      return newShapeIds;
+    },
+    [clipboard, addShapeToFirebase, shapes, currentUser]
+  );
+
   const value: CanvasContextType = {
     shapes,
     selectedId,
@@ -743,6 +880,7 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     stageRef,
     loading,
     error,
+    hasClipboard: clipboard.length > 0,  // NEW: Expose clipboard state
     addShape,
     bulkAddShapes,
     updateShape,
@@ -757,6 +895,9 @@ export const CanvasProvider = ({ children }: CanvasProviderProps) => {
     unlockShape,
     duplicateShape,
     nudgeShape,
+    copyShapes,  // NEW: Copy to clipboard
+    cutShapes,   // NEW: Cut to clipboard
+    pasteShapes, // NEW: Paste from clipboard
     setOperationCallback: useCallback((callback) => {
       operationCallbackRef.current = callback;
     }, []),
