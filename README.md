@@ -1,11 +1,13 @@
 # CollabCanvas MVP
 
-> 🎨 A real-time collaborative canvas application built with React, TypeScript, Firebase, and Konva. Multiple users can create, move, and delete shapes on a shared canvas with live cursor tracking and presence awareness.
+> 🎨 An AI-powered, real-time collaborative canvas application built with React, TypeScript, Firebase, Konva, and AWS Lambda. Multiple users can create, move, and delete shapes using natural language AI commands on a shared canvas with live cursor tracking and presence awareness.
 
 [![Live Demo](https://img.shields.io/badge/demo-live-success)](https://collabcanvas-f7ee2.web.app)
 [![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
 [![Firebase](https://img.shields.io/badge/Firebase-10-orange)](https://firebase.google.com/)
+[![AWS Lambda](https://img.shields.io/badge/AWS_Lambda-Node.js_20-orange)](https://aws.amazon.com/lambda/)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-green)](https://openai.com/)
 [![Vite](https://img.shields.io/badge/Vite-7-purple)](https://vite.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-cyan)](https://tailwindcss.com/)
 
@@ -15,24 +17,52 @@
 
 ### ✅ Fully Implemented & Deployed
 
+- **🤖 AI-Powered Canvas Commands** ⭐ **NEW**
+  - Natural language commands to create and manipulate shapes
+  - "Create a grid of 50 circles" - instantly generates shapes
+  - "Move the blue rectangle to center" - smart shape selection
+  - "Make the text bigger" - contextual modifications
+  - Powered by OpenAI GPT-4o-mini via AWS Lambda
+  - Supports up to 2000 shapes in a single command
+  - Smart color keyword mapping (red, blue, green, etc.)
+  - Intelligent layout understanding (avoids breaking complex designs)
+
 - **🎨 Interactive Canvas**
   - Infinite 5000x5000px canvas with smooth pan and zoom
   - Grid background for better spatial awareness
   - Dark mode UI for comfortable extended use
   - Tool-based workflow with dedicated toolbox
+  - Layers panel for visual hierarchy management
+  - Drag-and-drop layer reordering
+  - Undo/redo functionality (Ctrl+Z / Ctrl+Y)
 
 - **🔧 Shape Creation & Management**
-  - Create rectangular shapes using the rectangle tool
+  - Create shapes: rectangles, circles, triangles, stars, text
   - Click and drag to define shape size
-  - Select, move, resize, and delete shapes
-  - Color-coded shapes with random vibrant colors
+  - Select, move, resize, rotate, and delete shapes
+  - Duplicate shapes (Ctrl+D / Cmd+D)
+  - Rich shape properties: color, opacity, blend modes, rotation
+  - Advanced alignment tools (left, center, right, top, middle, bottom)
+  - Distribution tools (horizontal/vertical spacing)
   - Visual feedback for selected shapes
+  - Bring forward/backward, send to front/back
+
+- **📋 Layers Panel** ⭐ **NEW**
+  - Visual list of all shapes on canvas
+  - Drag-and-drop to reorder layers (changes z-index)
+  - Show/hide shapes with visibility toggle
+  - Rename layers for better organization
+  - Quick layer navigation (click to select on canvas)
+  - Auto-generated names for AI-created shapes
+  - Smart icon colors (visible even for dark shapes)
+  - Compact, collapsible interface
 
 - **👥 Real-time Collaboration**
   - Multiple users can edit the canvas simultaneously
   - Automatic object locking when shapes are being edited
   - Server-authoritative updates prevent conflicts
   - Offline persistence with automatic sync on reconnection
+  - Live shape synchronization across all connected users
 
 - **🖱️ Multiplayer Cursors**
   - See other users' cursors in real-time
@@ -53,28 +83,50 @@
   - Display name truncation for long names
   - Protected routes for authenticated users
   - Persistent sessions with Firebase Auth
+  - Secure Firebase ID token verification
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 19 + TypeScript
+### Frontend
+- **Framework**: React 19 + TypeScript
 - **Build Tool**: Vite 7
 - **Canvas Rendering**: Konva 10 + React Konva 19
 - **Styling**: Tailwind CSS 4 with PostCSS
-- **Backend**: Firebase
-  - Authentication (Email/Password + Google OAuth)
-  - Firestore (shape data persistence & real-time sync)
-  - Realtime Database (cursor positions & presence data)
-  - Security Rules (deployed for both Firestore & RTDB)
+
+### Backend & Services
+- **Authentication**: Firebase Authentication (Email/Password + Google OAuth)
+- **Database**: 
+  - Firebase Firestore (shape data persistence & real-time sync)
+  - Firebase Realtime Database (cursor positions & presence data)
+- **AI Backend**: AWS Lambda (Node.js 20.x)
+  - LangChain 0.2 for agentic workflows
+  - OpenAI GPT-4o-mini for natural language understanding
+  - Zod for schema validation
+  - Firebase Admin SDK for auth verification
+- **API Gateway**: AWS API Gateway (HTTP API with CORS)
+- **Secrets Management**: AWS Secrets Manager (OpenAI API key)
 - **Hosting**: Firebase Hosting ✅ **Deployed & Live**
+
+### Infrastructure
+- **Frontend**: Firebase Hosting (CDN, HTTPS, custom domain support)
+- **Backend**: AWS Lambda (serverless, auto-scaling)
+- **Monitoring**: AWS CloudWatch (logs, metrics, alarms)
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
 
+### For Frontend Development
 - **Node.js** (v18 or higher)
 - **npm** (v9 or higher)
 - **Git**
-- A **Firebase account** (free tier is sufficient)
+
+### For Full Stack Development (including AI)
+- All frontend prerequisites above
+- **AWS CLI** configured with credentials
+- **AWS Account** with Lambda and API Gateway access
+- **OpenAI API Key** (for AI features)
+- **Firebase Account** (free tier is sufficient)
 - **Firebase CLI** (for deployment): `npm install -g firebase-tools`
 
 ## 🔧 Setup Instructions
@@ -118,9 +170,10 @@ Create a `.env` file in the project root:
 cp .env.example .env
 ```
 
-Then edit `.env` and fill in your Firebase configuration values:
+Then edit `.env` and fill in your Firebase and AWS configuration values:
 
 ```env
+# Firebase Configuration
 VITE_FIREBASE_API_KEY=your_api_key_here
 VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your_project_id
@@ -128,9 +181,14 @@ VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
 VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 VITE_FIREBASE_APP_ID=your_app_id
 VITE_FIREBASE_DATABASE_URL=https://your_project_id-default-rtdb.firebaseio.com
+
+# AI Agent Configuration (AWS Lambda)
+VITE_AI_API_URL=https://YOUR-API-ID.execute-api.us-east-1.amazonaws.com/ai/command
 ```
 
 **Important**: Never commit your `.env` file to version control. It's already included in `.gitignore`.
+
+**Note**: To enable AI features, you must also set up the AWS Lambda backend (see AWS Lambda Setup section below).
 
 ### 5. Run the Development Server
 
@@ -139,6 +197,109 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:5173/`
+
+### 6. (Optional) Set Up AWS Lambda AI Backend
+
+To enable AI canvas commands, you need to deploy the AWS Lambda function:
+
+#### Step 1: Configure AWS Credentials
+
+```bash
+aws configure
+```
+
+Enter your AWS Access Key ID, Secret Access Key, and default region (e.g., `us-east-1`).
+
+#### Step 2: Create OpenAI API Key Secret
+
+```bash
+aws secretsmanager create-secret \
+  --name collabcanvas-openai-key \
+  --description "OpenAI API key for CollabCanvas AI Agent" \
+  --secret-string '{"OPENAI_API_KEY":"sk-YOUR-OPENAI-KEY-HERE"}'
+```
+
+Get your OpenAI API key from [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+
+#### Step 3: Create IAM Role for Lambda
+
+Create an execution role with these policies:
+- `AWSLambdaBasicExecutionRole` (for CloudWatch logs)
+- `SecretsManagerReadWrite` (to read OpenAI API key)
+
+Save the role ARN for the next step.
+
+#### Step 4: Build and Deploy Lambda Function
+
+```bash
+cd aws-lambda
+
+# Install dependencies
+npm install
+
+# Build TypeScript
+npm run build
+
+# Package for deployment (Windows PowerShell)
+Remove-Item -Path lambda-package.zip -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path deploy -Force
+Copy-Item -Path dist\* -Destination deploy\ -Recurse -Force
+Copy-Item -Path node_modules -Destination deploy\node_modules -Recurse -Force
+Copy-Item -Path package.json -Destination deploy\ -Force
+Compress-Archive -Path deploy\* -DestinationPath lambda-package.zip -Force
+Remove-Item -Path deploy -Recurse -Force
+
+# Or use bash script (Linux/Mac)
+# ./deploy.sh
+
+# Create Lambda function (first time only)
+aws lambda create-function \
+  --function-name collabcanvas-ai-agent \
+  --runtime nodejs20.x \
+  --role arn:aws:iam::YOUR-ACCOUNT-ID:role/lambda-execution-role \
+  --handler index.handler \
+  --zip-file fileb://lambda-package.zip \
+  --timeout 30 \
+  --memory-size 512 \
+  --environment Variables="{SECRET_NAME=collabcanvas-openai-key,NODE_ENV=production}"
+
+# For subsequent updates
+aws lambda update-function-code \
+  --function-name collabcanvas-ai-agent \
+  --zip-file fileb://lambda-package.zip
+```
+
+#### Step 5: Create API Gateway
+
+1. Go to AWS Console → API Gateway
+2. Create HTTP API
+3. Add integration:
+   - Type: Lambda function
+   - Lambda: `collabcanvas-ai-agent`
+   - Integration name: `ai-command`
+4. Add route:
+   - Method: `POST`
+   - Path: `/ai/command`
+5. Configure CORS:
+   - Allow origins: Your Firebase Hosting URL
+   - Allow methods: `POST, OPTIONS`
+   - Allow headers: `Authorization, Content-Type`
+6. Deploy API and copy the Invoke URL
+7. Update `.env` with `VITE_AI_API_URL=<your-api-gateway-url>`
+
+#### Step 6: Test AI Commands
+
+1. Restart your dev server: `npm run dev`
+2. Open the app and click the AI command bar (bottom of screen)
+3. Try: "Create a grid of 10 circles"
+4. Check AWS CloudWatch logs for debugging:
+   ```bash
+   aws logs tail /aws/lambda/collabcanvas-ai-agent --follow
+   ```
+
+For detailed AWS Lambda documentation, see [aws-lambda/README.md](./aws-lambda/README.md).
+
+---
 
 ## 📦 Available Scripts
 
@@ -174,23 +335,46 @@ Runs ESLint to check for code quality issues.
 
 The application requires the following environment variables (all prefixed with `VITE_` to be accessible in the browser):
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_FIREBASE_API_KEY` | Firebase API key | `AIzaSyC...` |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | `my-app.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID | `my-app-12345` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | `my-app.appspot.com` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | `123456789` |
-| `VITE_FIREBASE_APP_ID` | Firebase app ID | `1:123456789:web:abc123` |
-| `VITE_FIREBASE_DATABASE_URL` | Realtime Database URL | `https://my-app-default-rtdb.firebaseio.com` |
+| Variable | Description | Example | Required |
+|----------|-------------|---------|----------|
+| `VITE_FIREBASE_API_KEY` | Firebase API key | `AIzaSyC...` | Yes |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | `my-app.firebaseapp.com` | Yes |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID | `my-app-12345` | Yes |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | `my-app.appspot.com` | Yes |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | `123456789` | Yes |
+| `VITE_FIREBASE_APP_ID` | Firebase app ID | `1:123456789:web:abc123` | Yes |
+| `VITE_FIREBASE_DATABASE_URL` | Realtime Database URL | `https://my-app-default-rtdb.firebaseio.com` | Yes |
+| `VITE_AI_API_URL` | AWS API Gateway URL for AI agent | `https://abc123.execute-api.us-east-1.amazonaws.com/ai/command` | Optional* |
 
-**Note**: In Vite, environment variables must be prefixed with `VITE_` to be exposed to the client-side code.
+**Note**: 
+- In Vite, environment variables must be prefixed with `VITE_` to be exposed to the client-side code.
+- `VITE_AI_API_URL` is optional if you don't want AI features. Without it, the app works as a regular collaborative canvas.
 
 ## 📁 Project Structure
 
 ```
 gauntlet-collabcanvas-week-1/
-├── public/                    # Static assets
+├── aws-lambda/                   # AI Agent backend (AWS Lambda)
+│   ├── src/
+│   │   ├── aiAgent.ts            # LangChain AI agent logic
+│   │   ├── index.ts              # Lambda handler
+│   │   ├── auth/
+│   │   │   └── firebaseAuth.ts   # Firebase token verification
+│   │   ├── executors/
+│   │   │   └── geometryExecutors.ts # Shape manipulation utilities
+│   │   ├── middleware/
+│   │   │   ├── idempotency.ts    # Request deduplication
+│   │   │   └── rateLimit.ts      # Rate limiting
+│   │   ├── schemas/
+│   │   │   └── tools.ts          # Zod schemas for AI tools
+│   │   └── utils/
+│   │       └── secrets.ts        # AWS Secrets Manager client
+│   ├── dist/                     # Compiled JavaScript
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── lambda-package.zip        # Deployment package
+│   └── README.md                 # Lambda-specific docs
+├── public/                       # Static assets
 ├── src/
 │   ├── components/
 │   │   ├── Auth/
@@ -199,7 +383,11 @@ gauntlet-collabcanvas-week-1/
 │   │   │   └── Signup.tsx          # Signup form
 │   │   ├── Canvas/
 │   │   │   ├── Canvas.tsx          # Main canvas component
-│   │   │   ├── CanvasControls.tsx  # Zoom controls
+│   │   │   ├── CanvasControls.tsx  # Zoom/pan controls
+│   │   │   ├── CommandBar.tsx      # AI command input
+│   │   │   ├── HistoryManager.tsx  # Undo/redo logic
+│   │   │   ├── LayersPanel.tsx     # Layers panel (right sidebar)
+│   │   │   ├── LayerItem.tsx       # Individual layer component
 │   │   │   ├── Shape.tsx           # Individual shape renderer
 │   │   │   └── Toolbox.tsx         # Tool selection sidebar
 │   │   ├── Collaboration/
@@ -209,17 +397,21 @@ gauntlet-collabcanvas-week-1/
 │   │   └── Layout/
 │   │       └── Navbar.tsx          # Top navigation bar
 │   ├── contexts/
+│   │   ├── AIAgentContext.tsx      # AI agent state
 │   │   ├── AuthContext.tsx         # Authentication state
 │   │   └── CanvasContext.tsx       # Canvas & shapes state
 │   ├── hooks/
 │   │   ├── useAuth.ts              # Auth hook
 │   │   ├── useCanvas.ts            # Canvas data hook
 │   │   ├── useCursors.ts           # Multiplayer cursors hook
+│   │   ├── useKeyboard.ts          # Keyboard shortcuts hook
 │   │   └── usePresence.ts          # User presence hook
 │   ├── services/
+│   │   ├── aiAgent.ts              # AI agent frontend service
 │   │   ├── auth.ts                 # Firebase auth service
 │   │   ├── canvas.ts               # Firestore canvas service
 │   │   ├── cursors.ts              # RTDB cursors service
+│   │   ├── export.ts               # Canvas export utilities
 │   │   ├── firebase.ts             # Firebase initialization
 │   │   └── presence.ts             # RTDB presence service
 │   ├── utils/
@@ -266,12 +458,55 @@ gauntlet-collabcanvas-week-1/
 - **Pan**: Hold `Spacebar` + drag, or use middle mouse button
 - **Zoom**: Mouse wheel, or use the zoom controls (top-right)
 - **Select Tool**: Click the select icon in the toolbox (left sidebar)
-- **Rectangle Tool**: Click the rectangle icon to start drawing shapes
-- **Create Shape**: With rectangle tool selected, click and drag on the canvas
+- **Shape Tools**: Click rectangle, circle, triangle, star, or text icons
+- **Create Shape**: With a shape tool selected, click and drag on the canvas
 - **Move Shape**: Select a shape and drag it
 - **Resize Shape**: Select a shape and drag the corner/edge handles
+- **Rotate Shape**: Select a shape and drag the rotation handle (top)
 - **Delete Shape**: Select a shape and press `Delete` or `Backspace`
+- **Duplicate Shape**: Select a shape and press `Ctrl+D` (or `Cmd+D` on Mac)
+- **Undo**: `Ctrl+Z` (or `Cmd+Z`)
+- **Redo**: `Ctrl+Y` (or `Cmd+Y`)
 - **Deselect**: Click on empty canvas area
+
+### AI Commands ⭐
+
+Click the command bar at the bottom of the screen and type natural language commands:
+
+**Creating Shapes:**
+- "Create a grid of 50 circles"
+- "Make a login form with email, password, and button"
+- "Draw 10 red squares in a row"
+- "Create a blue circle at position 500, 300"
+
+**Modifying Shapes:**
+- "Move the blue rectangle to center"
+- "Make the text bigger"
+- "Rotate the square 45 degrees"
+- "Change the circle color to red"
+- "Make all rectangles 50% transparent"
+
+**Arranging Shapes:**
+- "Arrange these shapes in a horizontal row"
+- "Align the squares to the left"
+- "Distribute the circles evenly"
+
+**Tips:**
+- Be specific about which shapes you want to modify
+- Mention colors, types, or positions to target specific shapes
+- The AI understands both absolute coordinates and relative positions
+- Complex layouts may require multiple commands for best results
+
+### Layers Panel ⭐
+
+Click the "Layers" button in the top navigation to open the layers panel:
+
+- **Reorder Layers**: Drag and drop layers to change z-index
+- **Show/Hide**: Click the eye icon to toggle visibility
+- **Rename**: Double-click the layer name to edit
+- **Select**: Click a layer to select it on the canvas
+- **Delete**: Click the trash icon to remove a shape
+- **Layer Controls**: Use ↑/↓ buttons to move layers one step at a time
 
 ### Testing Multiplayer Features
 
@@ -282,30 +517,48 @@ gauntlet-collabcanvas-week-1/
    - Live shape updates across all windows
    - Active user count in the top-right
    - User presence list (expandable) showing all online users
+   - AI commands executed by one user appear on all screens
 
 ## 🏗️ Key Architectural Decisions
 
 ### State Management
-- **React Context API** for global state (auth, canvas)
+- **React Context API** for global state (auth, canvas, AI)
 - Custom hooks for feature encapsulation
-- Service layer pattern for Firebase operations
+- Service layer pattern for Firebase and AWS operations
+- Optimistic UI updates with server reconciliation
+
+### AI Agent Architecture
+- **AWS Lambda** for serverless, auto-scaling compute
+- **LangChain** for agentic workflow orchestration
+- **OpenAI GPT-4o-mini** for natural language understanding
+- **Zod schemas** for runtime type validation
+- **Firebase ID tokens** for secure authentication
+- **Tool calling pattern**: AI returns structured function calls executed by frontend
+- **Idempotency middleware**: Prevents duplicate command execution
+- **Rate limiting**: 10 requests/user/minute to prevent abuse
+- **Batch processing**: Handles up to 2000 shape operations in a single command
 
 ### Real-time Sync Strategy
 - **Firestore** for persistent shape data (supports offline, complex queries)
 - **Realtime Database** for ephemeral data (cursors, presence) - lower latency
 - Server-authoritative updates to prevent conflicts
 - Optimistic UI updates with server reconciliation
+- **Challenge**: Firestore 1MB document size limit (~2300 shapes max)
+  - Future: Implement sharding for unlimited shapes
 
 ### Canvas Coordinate System
 - Cursors stored in **canvas coordinates** (zoom/pan independent)
 - Converted to **screen coordinates** for rendering
 - Enables accurate positioning across different zoom levels
+- Shape transformations (rotation, scale) use Konva's built-in matrix math
 
 ### Performance Optimizations
 - Cursor updates throttled to 25 FPS
 - 2px movement threshold to reduce unnecessary updates
 - Konva layer caching for static elements
 - Automatic cleanup of disconnected users
+- Lambda cold start mitigation: 512MB memory, Node.js 20.x
+- AI command debouncing to prevent rapid-fire requests
 
 ## 🔒 Security
 
@@ -350,9 +603,13 @@ service cloud.firestore {
 
 ## 🚀 Deployment
 
-The application is deployed on Firebase Hosting. To deploy updates:
+The application is deployed across two platforms:
+- **Frontend**: Firebase Hosting
+- **Backend (AI Agent)**: AWS Lambda + API Gateway
 
-### First Time Deployment
+### Frontend Deployment (Firebase Hosting)
+
+#### First Time Deployment
 
 ```bash
 # Install Firebase CLI globally
@@ -371,7 +628,7 @@ npm run build
 firebase deploy
 ```
 
-### Update Deployment
+#### Update Deployment
 
 ```bash
 # Build production bundle
@@ -387,7 +644,55 @@ firebase deploy --only firestore:rules,database
 firebase deploy
 ```
 
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+### Backend Deployment (AWS Lambda)
+
+#### First Time Deployment
+
+See the **AWS Lambda Setup** section above for detailed instructions.
+
+#### Update Deployment
+
+```bash
+cd aws-lambda
+
+# Build TypeScript
+npm run build
+
+# Package and deploy (Windows PowerShell)
+Remove-Item -Path lambda-package.zip -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Path deploy -Force
+Copy-Item -Path dist\* -Destination deploy\ -Recurse -Force
+Copy-Item -Path node_modules -Destination deploy\node_modules -Recurse -Force
+Copy-Item -Path package.json -Destination deploy\ -Force
+Compress-Archive -Path deploy\* -DestinationPath lambda-package.zip -Force
+Remove-Item -Path deploy -Recurse -Force
+
+# Update Lambda function
+aws lambda update-function-code \
+  --function-name collabcanvas-ai-agent \
+  --zip-file fileb://lambda-package.zip
+
+# Verify deployment
+aws lambda get-function --function-name collabcanvas-ai-agent
+
+# Monitor logs
+aws logs tail /aws/lambda/collabcanvas-ai-agent --follow
+```
+
+### Full Stack Deployment Checklist
+
+1. ✅ Update environment variables (`.env`)
+2. ✅ Build and test locally (`npm run dev`)
+3. ✅ Build frontend (`npm run build`)
+4. ✅ Deploy Lambda backend (`cd aws-lambda && deploy`)
+5. ✅ Deploy Firebase frontend (`firebase deploy --only hosting`)
+6. ✅ Test production deployment
+7. ✅ Monitor CloudWatch logs for Lambda errors
+8. ✅ Verify Firebase Security Rules are deployed
+
+For detailed deployment instructions, see:
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Firebase deployment guide
+- [aws-lambda/README.md](./aws-lambda/README.md) - Lambda deployment guide
 
 ## 🚧 Development Roadmap
 
@@ -417,12 +722,14 @@ For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 - [x] Grid background
 
 **PR #4: Local Shape Management**
-- [x] Shape component (rectangles)
-- [x] Color palette with random colors
+- [x] Multiple shape types (rectangle, circle, triangle, star, text)
+- [x] Color palette with vibrant colors
 - [x] Click-and-drag shape creation
 - [x] Shape selection & dragging
 - [x] Shape resizing (Transformer)
+- [x] Shape rotation
 - [x] Delete functionality (keyboard)
+- [x] Duplicate functionality (Ctrl+D / Cmd+D)
 - [x] Click-to-deselect
 
 **PR #5: Real-time Canvas Sync**
@@ -463,34 +770,89 @@ For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 **UI/UX Enhancements**
 - [x] Dark mode theme
 - [x] Toolbox for shape selection
-- [x] Select and rectangle tools
+- [x] Select and multiple shape tools
 - [x] Improved presence list visibility
 - [x] Optimized layout (toolbox left, canvas center, presence right)
 
+**AI Agent Implementation** ⭐
+- [x] AWS Lambda + LangChain + OpenAI integration
+- [x] Natural language command processing
+- [x] 11 AI tools (create, move, resize, rotate, delete, align, distribute, etc.)
+- [x] Bulk shape creation (up to 2000 shapes)
+- [x] Smart color keyword mapping
+- [x] Intelligent layout understanding
+- [x] Firebase ID token authentication
+- [x] Idempotency and rate limiting
+- [x] Command bar UI component
+- [x] Frontend-backend integration
+
+**History & Layer Management** ⭐
+- [x] Undo/redo functionality (Ctrl+Z / Ctrl+Y)
+- [x] History tracking for all operations
+- [x] Layers panel (right sidebar)
+- [x] Drag-and-drop layer reordering
+- [x] Show/hide shapes
+- [x] Rename layers
+- [x] Auto-generated layer names for AI shapes
+- [x] Bring forward/backward, send to front/back
+- [x] Smart icon colors for visibility
+
+**Advanced Shape Operations** ⭐
+- [x] Alignment tools (6 modes)
+- [x] Distribution tools (horizontal/vertical)
+- [x] Opacity and blend modes
+- [x] Rich text properties (font, size, bold, italic)
+- [x] Stroke properties
+
 ### 🔮 Future Enhancements
 
-- [ ] Additional shapes (circle, triangle, line, text)
+**Performance & Scalability**
+- [ ] Firestore sharding to support unlimited shapes (currently ~2300 max)
+- [ ] Virtual scrolling for layers panel with 1000+ shapes
+- [ ] WebGL rendering for better performance
+- [ ] Collaborative editing conflict resolution (operational transforms)
+
+**UI/UX Improvements**
 - [ ] Color picker for shapes
-- [ ] Undo/redo functionality
-- [ ] Layer management
-- [ ] Export canvas (PNG, SVG)
-- [ ] Canvas search and filtering
-- [ ] Performance optimizations for 100+ shapes
+- [ ] Canvas templates library
+- [ ] Multi-select with marquee selection
+- [ ] Keyboard shortcuts panel
 - [ ] Mobile responsive design
+- [ ] Touch gesture support (pinch zoom, two-finger pan)
+
+**AI Enhancements**
+- [ ] Upgrade to GPT-4o for better quality
+- [ ] Image-to-canvas conversion
+- [ ] Style transfer and theme generation
+- [ ] Natural language shape queries ("show me all red circles")
+- [ ] Context-aware suggestions
+
+**Collaboration Features**
+- [ ] Per-canvas permissions and roles
 - [ ] Collaborative chat
-- [ ] Version history
+- [ ] Comments and annotations
+- [ ] Version history and branching
+- [ ] Presence avatars on canvas
+
+**Export & Integration**
+- [ ] Export to PNG, SVG, PDF
+- [ ] Import from Figma, Sketch
+- [ ] Component library system
+- [ ] API for programmatic access
+- [ ] Webhooks for canvas events
 
 ## ⚠️ Known Limitations (MVP)
 
 - **Single Canvas**: All users share one global canvas (`global-canvas-v1`)
-- **Rectangle Only**: Only rectangular shapes are supported
-- **No Persistence**: Canvas resets don't preserve view state (zoom/pan)
-- **Limited Mobile Support**: Best experience on desktop/laptop
+- **Shape Limit**: Firestore 1MB document limit restricts to ~2300 shapes maximum
+- **No Persistence**: Canvas resets don't preserve view state (zoom/pan position)
+- **Limited Mobile Support**: Best experience on desktop/laptop with mouse
 - **No Access Control**: Any authenticated user can edit all shapes
-- **Performance**: May slow down with 100+ shapes (not yet optimized)
-- **No History**: No undo/redo or version history
 - **Cursor Lag**: Slight delay (~40ms) due to throttling - acceptable for MVP
-- **Static Colors**: Shape colors are random, cannot be changed after creation
+- **AI Command Rate Limit**: 10 requests per user per minute
+- **AI Model**: GPT-4o-mini for cost efficiency (may miss complex nuances)
+- **No Shape Groups**: Cannot group multiple shapes into a single unit
+- **No Canvas History**: Version control and time travel not yet implemented
 
 ## 🤝 Contributing
 
@@ -516,6 +878,20 @@ taskkill /F /IM node.exe
 - Verify that your Firebase project has Authentication, Firestore, and Realtime Database enabled
 - Check that your environment variable names are prefixed with `VITE_`
 - For Realtime Database, ensure the `databaseURL` is set correctly
+
+### AI Commands Not Working
+- Verify `VITE_AI_API_URL` is set in `.env`
+- Check AWS Lambda is deployed: `aws lambda get-function --function-name collabcanvas-ai-agent`
+- Verify OpenAI API key is in AWS Secrets Manager
+- Check CloudWatch logs: `aws logs tail /aws/lambda/collabcanvas-ai-agent --follow`
+- Ensure API Gateway CORS allows your origin
+- Check Firebase ID token is valid (user is authenticated)
+
+### Firestore Size Limit Error
+If you see "Document size exceeds 1,048,576 bytes":
+- You've hit the ~2300 shape limit
+- Clear the canvas or implement sharding (see Future Enhancements)
+- Temporary workaround: Delete some shapes to free space
 
 ### Tailwind CSS v4 Issues
 If you see PostCSS errors about Tailwind:
@@ -545,6 +921,12 @@ If cursors stay in place during zoom/pan:
 - Cursor rendering should convert canvas coords to screen coords
 - Check that cursor updates trigger on pan/zoom events
 
+### Lambda Cold Start Latency
+If first AI command is slow (~3-5 seconds):
+- This is normal for AWS Lambda cold starts
+- Consider provisioned concurrency for production
+- Subsequent requests will be fast (~1-2 seconds)
+
 ### Build Errors
 If you encounter build errors:
 ```bash
@@ -572,22 +954,29 @@ For issues and questions, please open an issue in the GitHub repository.
 
 ## 📊 Project Stats
 
-- **Total Development Time**: Week 1 MVP Sprint
-- **Lines of Code**: ~2,500+ (TypeScript/TSX)
-- **Components**: 15+ React components
-- **Services**: 5 Firebase services
-- **Custom Hooks**: 4 specialized hooks
-- **PRs Completed**: 7 (PR #8 skipped, PR #9 deployment)
+- **Total Development Time**: Week 1 MVP Sprint + AI Integration
+- **Lines of Code**: ~5,000+ (TypeScript/TSX)
+  - Frontend: ~3,500 lines
+  - Backend (Lambda): ~1,500 lines
+- **Components**: 20+ React components
+- **Services**: 8 service modules (5 frontend, 3 backend)
+- **Custom Hooks**: 5 specialized hooks
+- **AI Tools**: 11 LangChain tools for canvas manipulation
+- **PRs Completed**: 9 (PR #8 skipped, PR #10+ for AI features)
+- **Deployment Platforms**: 2 (Firebase Hosting + AWS Lambda)
+- **APIs Integrated**: 4 (Firebase Auth, Firestore, Realtime DB, OpenAI)
 
 ## 📚 Additional Resources
 
 - [Product Requirements Document (PRD.md)](./PRD.md) - Full product specification
 - [Development Tasks (tasks.md)](./tasks.md) - Task breakdown and checklist
-- [Architecture Overview (architecture.md)](./architecture.md) - System design
-- [Deployment Guide (DEPLOYMENT.md)](./DEPLOYMENT.md) - Deployment instructions
+- [AWS Lambda README (aws-lambda/README.md)](./aws-lambda/README.md) - AI backend documentation
+- [Deployment Guide (DEPLOYMENT.md)](./DEPLOYMENT.md) - Detailed deployment steps
 
 ---
 
 **Built with ❤️ as part of the Gauntlet AI CollabCanvas Challenge**
 
-*Week 1 MVP - Real-time Collaborative Canvas Application*
+*Week 1 MVP - AI-Powered Real-time Collaborative Canvas Application*
+
+**🎯 Key Achievement:** Successfully integrated OpenAI GPT-4o-mini with AWS Lambda to power natural language canvas commands, supporting up to 2000 shapes in a single command while maintaining real-time collaboration across multiple users.
